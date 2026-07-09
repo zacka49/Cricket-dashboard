@@ -35,6 +35,20 @@ def test_portfolio_readiness_report_tracks_passes_and_gaps(tmp_path: Path) -> No
     assert report["summary"]["complete"] < report["summary"]["total"]
     assert any(item["key"] == "real_money_disabled" and item["status"] == "pass" for item in report["items"])
     assert any(item["key"] == "historical_backtesting" and item["status"] == "gap" for item in report["items"])
+    assert any(item["key"] == "autonomous_engine" and item["status"] == "gap" for item in report["items"])
+
+
+def test_readiness_autonomous_engine_item_passes_once_the_engine_has_ticked(tmp_path: Path) -> None:
+    db = Database(tmp_path / "readiness.sqlite3")
+    db.init_schema()
+    db.execute(
+        "INSERT INTO autonomous_state(id, last_tick_at, updated_at) VALUES (1, ?, ?)",
+        (utc_now(), utc_now()),
+    )
+
+    report = portfolio_readiness_report(db)
+
+    assert any(item["key"] == "autonomous_engine" and item["status"] == "pass" for item in report["items"])
 
 
 def _insert_match(db: Database, match_id: str, match_date: str, team_a: str, team_b: str, winner: str) -> None:

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -49,7 +50,7 @@ def portfolio_readiness_report(db: Database) -> dict[str, Any]:
             "historical_backtesting",
             "Historical strategy backtesting",
             "pass" if _count_where(db, "backtest_runs", "bets > 0") > 0 else "gap",
-            "Run Week 4/backtesting after historical market odds exist.",
+            "Run the market data build/backtest after historical market odds exist.",
         ),
         _item(
             "clv_tracking",
@@ -64,10 +65,10 @@ def portfolio_readiness_report(db: Database) -> dict[str, Any]:
             "Agent decisions are persisted with reasons and payloads.",
         ),
         _item(
-            "scheduler_script",
-            "Paper scheduler script",
-            "pass" if (PROJECT_ROOT / "scripts" / "run_paper_scheduler.py").exists() else "gap",
-            "A local script can run morning and monitor cycles in paper mode.",
+            "autonomous_engine",
+            "Autonomous engine heartbeat",
+            "pass" if _autonomous_engine_alive(db) else "gap",
+            "Background engine ticks monitor/settle continuously and retrains on a schedule, without manual button presses.",
         ),
         _item(
             "tests",
@@ -115,6 +116,14 @@ def _latest_skip_reason_mentions(db: Database, needle: str) -> bool:
         """
     )
     return bool(row and needle.lower() in str(row["reason"]).lower())
+
+
+def _autonomous_engine_alive(db: Database) -> bool:
+    row = db.query_one("SELECT last_tick_at FROM autonomous_state WHERE id = 1")
+    if not row or not row["last_tick_at"]:
+        return False
+    last_tick = datetime.fromisoformat(str(row["last_tick_at"]).replace("Z", "+00:00"))
+    return (datetime.now(timezone.utc) - last_tick).total_seconds() <= 2 * SETTINGS.autonomous_tick_seconds
 
 
 def _tests_exist() -> bool:
