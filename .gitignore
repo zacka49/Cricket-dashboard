@@ -1,0 +1,8 @@
+.env
+data/
+*.log
+__pycache__/
+*.pyc
+.pytest_cache/
+runtime_logs/
+cricket_edge/web/static/plotly.min.js

@@ -1,0 +1,294 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Cricket Edge</title>
+    <link rel="stylesheet" href="/static/styles.css">
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar">
+        <div class="brand">
+          <div class="brand-mark">CE</div>
+          <div>
+            <h1>Cricket Edge</h1>
+            <p>Autonomous paper betting research</p>
+          </div>
+        </div>
+
+        <div class="mode-banner">
+          <span class="dot"></span>
+          Paper mode only
+        </div>
+
+        <nav class="nav-list" id="pageNav">
+          <button class="nav-link active" data-page="overview">Overview</button>
+          <button class="nav-link" data-page="models">Models</button>
+          <button class="nav-link" data-page="bets">Paper Bets</button>
+          <button class="nav-link" data-page="data">Data &amp; Logs</button>
+        </nav>
+
+        <div class="control-stack">
+          <p class="control-label">Live workflow</p>
+          <button id="runMorning" class="primary">Run Morning</button>
+          <button id="monitorTick">Monitor Tick</button>
+          <button id="pullLiveData">Pull All Live Data</button>
+          <button id="fetchBet365Odds">Fetch Live Odds</button>
+          <button id="settleBets">Settle Paper</button>
+          <button id="resetDemo" class="danger">Reset Demo</button>
+        </div>
+
+        <div class="small-note">
+          Uses deterministic demo data until free sources or local files are connected.
+        </div>
+      </aside>
+
+      <main class="main">
+        <section class="topbar">
+          <div>
+            <p class="eyebrow">Local research dashboard</p>
+            <h2 id="pageTitle">Cricket model decisions, paper execution, and live monitoring</h2>
+          </div>
+          <div id="lastUpdated" class="last-updated">Loading...</div>
+        </section>
+
+        <!-- ============ OVERVIEW ============ -->
+        <section class="page active" data-page="overview">
+          <section class="metrics-grid" id="overview"></section>
+
+          <div class="panel">
+            <div class="panel-header">
+              <div>
+                <p class="eyebrow">System design</p>
+                <h3>What this is</h3>
+              </div>
+            </div>
+            <p class="about-copy">
+              A local-first cricket betting research system that separates three layers by design: statistical
+              models estimate probability, fair odds, and edge; hard risk rules decide whether execution is
+              allowed; and a local LLM only explains decisions after the fact &mdash; it never sets the probability
+              or the stake. The broker is paper-only until the models prove calibration and closing-line value
+              over a meaningful sample.
+            </p>
+          </div>
+
+          <div class="panel">
+            <div class="panel-header">
+              <div>
+                <p class="eyebrow">Agentic workflow</p>
+                <h3>Agent Pipeline</h3>
+              </div>
+              <span class="pill">Morning run &amp; monitor tick</span>
+            </div>
+            <div id="agentPipeline" class="pipeline"></div>
+          </div>
+
+          <div class="layout-grid">
+            <div class="panel wide">
+              <div class="panel-header">
+                <div>
+                  <p class="eyebrow">Daily briefing</p>
+                  <h3>Agent Notes</h3>
+                </div>
+              </div>
+              <div id="briefing" class="briefing"></div>
+            </div>
+
+            <div class="panel">
+              <div class="panel-header">
+                <div>
+                  <p class="eyebrow">Portfolio evidence</p>
+                  <h3>Readiness Checklist</h3>
+                </div>
+              </div>
+              <div id="readinessPanel"></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ============ MODELS ============ -->
+        <section class="page" data-page="models">
+          <div class="panel">
+            <div class="panel-header">
+              <div>
+                <p class="eyebrow">Retrain</p>
+                <h3>Model Training</h3>
+              </div>
+              <div class="inline-actions">
+                <button id="trainElo">Train Elo</button>
+                <button id="trainLogistic">Train Logistic</button>
+                <button id="trainWeek3">Train Week 3</button>
+                <button id="runWeek4">Run Week 4</button>
+              </div>
+            </div>
+            <div id="trainingDataPanel"></div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-header">
+              <div>
+                <p class="eyebrow">All trained models</p>
+                <h3>Model Comparison</h3>
+              </div>
+              <span class="pill">Brier &middot; log loss &middot; accuracy</span>
+            </div>
+            <div class="chart-container" id="chart-model_comparison"></div>
+          </div>
+
+          <div class="layout-grid">
+            <div class="panel wide">
+              <div class="panel-header">
+                <div>
+                  <p class="eyebrow">Reliability</p>
+                  <h3>Calibration &mdash; Active Model</h3>
+                </div>
+              </div>
+              <div class="chart-container" id="chart-calibration"></div>
+            </div>
+
+            <div class="panel">
+              <div class="panel-header">
+                <div>
+                  <p class="eyebrow">Registry</p>
+                  <h3>Model Status</h3>
+                </div>
+              </div>
+              <div id="weekThreePanel"></div>
+            </div>
+          </div>
+
+          <div class="layout-grid">
+            <div class="panel wide">
+              <div class="panel-header">
+                <div>
+                  <p class="eyebrow">Interpretability</p>
+                  <h3>Feature Importance</h3>
+                </div>
+              </div>
+              <div class="chart-container" id="chart-feature_importance"></div>
+            </div>
+
+            <div class="panel">
+              <div class="panel-header">
+                <div>
+                  <p class="eyebrow">Ratings</p>
+                  <h3>Top Elo Teams</h3>
+                </div>
+              </div>
+              <div class="chart-container" id="chart-elo_ratings"></div>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-header">
+              <div>
+                <p class="eyebrow">Model validation</p>
+                <h3>Historical Strategy Backtest</h3>
+              </div>
+              <span class="pill">No lookahead</span>
+            </div>
+            <div id="backtestSummary"></div>
+            <div class="layout-grid">
+              <div>
+                <h4 class="section-title">Cumulative P&amp;L</h4>
+                <div class="chart-container" id="chart-backtest_pnl"></div>
+              </div>
+              <div>
+                <h4 class="section-title">ROI by Edge Bucket</h4>
+                <div class="chart-container" id="chart-edge_bucket"></div>
+              </div>
+            </div>
+            <h4 class="section-title">By Competition</h4>
+            <div id="backtestCompetitionPanel"></div>
+          </div>
+        </section>
+
+        <!-- ============ PAPER BETS ============ -->
+        <section class="page" data-page="bets">
+          <section class="stat-cards" id="betsStats"></section>
+
+          <div class="panel">
+            <div class="panel-header">
+              <div>
+                <p class="eyebrow">Prediction model</p>
+                <h3>Today and Upcoming Matches</h3>
+              </div>
+              <span class="pill">Match winner</span>
+            </div>
+            <div id="matchesTable"></div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-header">
+              <div>
+                <p class="eyebrow">Track record</p>
+                <h3>Equity Curve</h3>
+              </div>
+            </div>
+            <div class="chart-container" id="chart-equity_curve"></div>
+          </div>
+
+          <div class="layout-grid">
+            <div class="panel wide">
+              <div class="panel-header">
+                <div>
+                  <p class="eyebrow">Execution</p>
+                  <h3>Paper Bets</h3>
+                </div>
+              </div>
+              <div id="betsTable"></div>
+            </div>
+
+            <div class="panel">
+              <div class="panel-header">
+                <div>
+                  <p class="eyebrow">Decision layer</p>
+                  <h3>Recent Agent Decisions</h3>
+                </div>
+              </div>
+              <div id="decisionsList" class="decision-list"></div>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-header">
+              <div>
+                <p class="eyebrow">Paper CLV</p>
+                <h3>Bet Evaluation vs Closing Odds</h3>
+              </div>
+            </div>
+            <div id="clvPanel"></div>
+          </div>
+        </section>
+
+        <!-- ============ DATA & LOGS ============ -->
+        <section class="page" data-page="data">
+          <div class="panel">
+            <div class="panel-header">
+              <div>
+                <p class="eyebrow">Live odds feed</p>
+                <h3>Odds, Sources, and Freshness</h3>
+              </div>
+              <span class="pill">Paper only</span>
+            </div>
+            <div id="weekFourPanel"></div>
+          </div>
+
+          <section class="panel" id="logs">
+            <div class="panel-header">
+              <div>
+                <p class="eyebrow">System trail</p>
+                <h3>Event Log</h3>
+              </div>
+            </div>
+            <div id="eventLog" class="event-log"></div>
+          </section>
+        </section>
+      </main>
+    </div>
+
+    <script src="/static/plotly.min.js"></script>
+    <script src="/static/app.js"></script>
+  </body>
+</html>
