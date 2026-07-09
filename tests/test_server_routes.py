@@ -7,7 +7,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from cricket_edge.database import Database
-from cricket_edge.orchestrator import CricketEdgeOrchestrator
+from cricket_edge.orchestrator import CricketEdgeOrchestrator, build_state
 from cricket_edge.server import AppState, CricketEdgeHandler
 
 
@@ -39,3 +39,26 @@ def test_post_actions_return_compact_reload_response() -> None:
     assert payload["reload_state"] is True
     assert "state" not in payload
     assert payload["result"]["predictions"] > 0
+
+
+def test_state_charts_stay_well_formed_on_an_empty_database(tmp_path: Path) -> None:
+    # Not a substitute for actually looking at the dashboard in a browser (no
+    # browser automation is available here), but a cheap guard against the chart
+    # builders crashing on a fresh, unseeded database rather than just an empty one.
+    db = Database(tmp_path / "empty.sqlite3")
+    db.init_schema()
+
+    state = build_state(db)
+
+    expected_keys = {
+        "model_comparison",
+        "calibration",
+        "feature_importance",
+        "elo_ratings",
+        "equity_curve",
+        "backtest_pnl",
+        "edge_bucket",
+    }
+    assert expected_keys <= state["charts"].keys()
+    for chart in state["charts"].values():
+        assert isinstance(chart, dict)
