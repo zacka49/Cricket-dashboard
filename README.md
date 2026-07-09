@@ -34,7 +34,13 @@ This first build is dependency-light and works offline with the Python standard 
 
 ## Run It
 
-From the project folder:
+Simplest: open `run.py` at the repo root and press Run/F5 in VS Code, or from a terminal:
+
+```powershell
+python run.py
+```
+
+From the project folder, auto-detecting a suitable Python interpreter:
 
 ```powershell
 .\scripts\run_windows.ps1
@@ -43,7 +49,7 @@ From the project folder:
 Or directly:
 
 ```powershell
-& "$env:LOCALAPPDATA\Programs\Python\Python312\python.exe" -m cricket_edge
+& "$env:LOCALAPPDATA\Programs\Python\Python313\python.exe" -m cricket_edge
 ```
 
 Then open:
