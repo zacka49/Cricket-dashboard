@@ -2,7 +2,13 @@ from __future__ import annotations
 
 from typing import Any
 
-from .agents import BetDecisionAgent, DataStewardAgent, MarketWatchAgent, ReportWriterAgent
+from .agents import (
+    BetDecisionAgent,
+    DataStewardAgent,
+    MarketWatchAgent,
+    PortfolioOversightAgent,
+    ReportWriterAgent,
+)
 from .advanced_models import latest_week3_report, train_week3_models
 from .backtesting import latest_backtest_report, run_latest_strategy_backtest
 from .charts import build_all_charts
@@ -29,13 +35,17 @@ class CricketEdgeOrchestrator:
         odds_refresh = self.fetch_bet365_odds()
         data_status = DataStewardAgent(self.db).run()
         predictions = PredictionEngine(self.db).run_for_open_fixtures()
-        decisions = BetDecisionAgent(self.db).run()
+        bet_agent = BetDecisionAgent(self.db)
+        proposals = bet_agent.evaluate()
+        reviewed = PortfolioOversightAgent(self.db).review(proposals)
+        placed = bet_agent.execute(reviewed)
         briefing = ReportWriterAgent(self.db).daily_briefing()
         return {
             "odds_refresh": odds_refresh,
             "data_status": data_status,
             "predictions": len(predictions),
-            "decisions": len(decisions),
+            "decisions": len(reviewed),
+            "bets_placed": len(placed),
             "briefing": briefing,
             "account": PaperBroker(self.db).account_summary(),
         }

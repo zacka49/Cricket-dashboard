@@ -64,6 +64,9 @@ class Settings:
     starting_bankroll: float = _env_float("CRICKET_EDGE_STARTING_BANKROLL", 1000.0)
     max_stake_fraction: float = _env_float("CRICKET_EDGE_MAX_STAKE_FRACTION", 0.01)
     max_daily_exposure_fraction: float = _env_float("CRICKET_EDGE_MAX_DAILY_EXPOSURE_FRACTION", 0.08)
+    max_portfolio_run_exposure_fraction: float = _env_float(
+        "CRICKET_EDGE_MAX_PORTFOLIO_RUN_EXPOSURE_FRACTION", 0.08
+    )
     min_edge: float = _env_float("CRICKET_EDGE_MIN_EDGE", 0.035)
     min_confidence: float = _env_float("CRICKET_EDGE_MIN_CONFIDENCE", 0.56)
     odds_stale_minutes: int = _env_int("CRICKET_EDGE_ODDS_STALE_MINUTES", 30)

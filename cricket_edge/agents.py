@@ -4,6 +4,7 @@ import json
 from datetime import datetime, timezone
 from typing import Any
 
+from .config import SETTINGS
 from .database import Database, utc_now
 from .llm import LocalLLMClient
 from .paper_broker import PaperBroker
@@ -67,7 +68,13 @@ class BetDecisionAgent:
         self.llm = llm or LocalLLMClient()
         self.broker = PaperBroker(db)
 
-    def run(self) -> list[dict[str, Any]]:
+    def evaluate(self) -> list[dict[str, Any]]:
+        """Proposes decisions for open predictions without placing any bets.
+
+        Side-effect-free w.r.t. paper_bets: callers must route the result
+        through an oversight step (see PortfolioOversightAgent) and then
+        execute() before any bet actually gets placed.
+        """
         predictions = self.db.query(
             """
             SELECT p.*, f.match_date, f.start_time, f.competition, f.team_a, f.team_b, f.venue
@@ -93,16 +100,42 @@ class BetDecisionAgent:
                 "confidence": prediction["confidence"],
                 "reason": reason,
                 "risk": risk,
+                "prediction": prediction,
             }
             decision_id = self._record(prediction, decision)
             decision["decision_id"] = decision_id
             if decision["decision"] == "paper_bet":
-                placed = self.broker.place_bet(decision, prediction)
-                decision["bet_id"] = placed
                 open_exposure += float(decision["stake"])
             decisions.append(decision)
-        self.db.log_event("agent", f"Bet Decision Agent reviewed {len(decisions)} candidates.")
+        self.db.log_event("agent", f"Bet Decision Agent evaluated {len(decisions)} candidates.")
         return decisions
+
+    def execute(self, decisions: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        """Places bets for decisions an oversight step has approved.
+
+        A decision with no oversight verdict, or a 'vetoed' one, is never
+        placed -- oversight approval is required, not just a proposed
+        'paper_bet' decision.
+        """
+        placed: list[dict[str, Any]] = []
+        for decision in decisions:
+            if decision["decision"] != "paper_bet":
+                continue
+            if decision.get("oversight", {}).get("status") != "approved":
+                continue
+            bet_id = self.broker.place_bet(decision, decision["prediction"])
+            decision["bet_id"] = bet_id
+            if bet_id:
+                placed.append(decision)
+        self.db.log_event("agent", f"Bet Decision Agent placed {len(placed)} paper bets.")
+        return placed
+
+    def run(self) -> list[dict[str, Any]]:
+        """Convenience wrapper: evaluate -> oversight review -> execute."""
+        proposals = self.evaluate()
+        reviewed = PortfolioOversightAgent(self.db).review(proposals)
+        self.execute(reviewed)
+        return reviewed
 
     def _llm_reason(self, prediction: dict[str, Any], risk: dict[str, Any]) -> str:
         context = {
@@ -144,6 +177,82 @@ class BetDecisionAgent:
                 json.dumps({"prediction": dict(prediction), "risk": decision["risk"]}, sort_keys=True, default=str),
             ),
         )
+
+
+class PortfolioOversightAgent:
+    """Sits between BetDecisionAgent.evaluate() and .execute(), able to veto
+    an individual proposed bet -- the coordination point where one agent's
+    output can be overridden by another, with its own audit trail row."""
+
+    name = "portfolio_oversight_agent"
+
+    def __init__(self, db: Database, portfolio_cap_fraction: float | None = None) -> None:
+        self.db = db
+        self.portfolio_cap_fraction = portfolio_cap_fraction
+
+    def review(self, proposals: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        needs_attention = self._data_steward_needs_attention()
+        cap_fraction = (
+            self.portfolio_cap_fraction
+            if self.portfolio_cap_fraction is not None
+            else SETTINGS.max_portfolio_run_exposure_fraction
+        )
+        bankroll = PaperBroker(self.db).account_summary()["bankroll"]
+        cap = bankroll * cap_fraction
+        running_total = 0.0
+        for proposal in proposals:
+            if proposal["decision"] != "paper_bet":
+                proposal["oversight"] = {"status": "not_applicable"}
+                continue
+            if needs_attention:
+                self._veto(
+                    proposal,
+                    "Data Steward flagged needs_attention; oversight blocks new paper bets this run.",
+                )
+                continue
+            running_total += float(proposal["stake"])
+            if running_total > cap:
+                self._veto(
+                    proposal,
+                    f"Portfolio-level run cap of GBP {cap:.2f} exceeded by this run's proposed bets; bet vetoed.",
+                )
+                continue
+            proposal["oversight"] = {"status": "approved"}
+        return proposals
+
+    def _data_steward_needs_attention(self) -> bool:
+        row = self.db.query_one(
+            """
+            SELECT decision FROM agent_decisions
+            WHERE agent_name = ?
+            ORDER BY generated_at DESC, id DESC
+            LIMIT 1
+            """,
+            (DataStewardAgent.name,),
+        )
+        return bool(row and row["decision"] == "needs_attention")
+
+    def _veto(self, proposal: dict[str, Any], reason: str) -> None:
+        decision_id = self.db.execute(
+            """
+            INSERT INTO agent_decisions(
+                fixture_id, agent_name, generated_at, decision, stake, confidence, reason, payload_json
+            )
+            VALUES (?, ?, ?, 'veto', 0, ?, ?, ?)
+            """,
+            (
+                proposal["fixture_id"],
+                self.name,
+                utc_now(),
+                float(proposal["confidence"]),
+                reason,
+                json.dumps(
+                    {"source_decision_id": proposal.get("decision_id"), "proposed_stake": proposal["stake"]},
+                    sort_keys=True,
+                ),
+            ),
+        )
+        proposal["oversight"] = {"status": "vetoed", "reason": reason, "oversight_decision_id": decision_id}
 
 
 class MarketWatchAgent:
