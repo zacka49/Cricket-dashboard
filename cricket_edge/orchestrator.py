@@ -54,8 +54,8 @@ class CricketEdgeOrchestrator:
 
     def settle(self) -> dict[str, Any]:
         broker = PaperBroker(self.db)
-        broker.settle_due_bets()
-        return {"account": broker.account_summary()}
+        settlement = broker.settle_due_bets()
+        return {"account": broker.account_summary(), "settlement": settlement}
 
     def train_elo(self) -> dict[str, Any]:
         return EloTrainer(self.db).train()

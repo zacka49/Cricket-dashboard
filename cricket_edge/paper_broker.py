@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-import hashlib
 from datetime import date
 from typing import Any
 
 from .database import Database, utc_now
+from .match_linkage import link_fixture_to_cricsheet, resolve_winner_for_fixture
 
 
 class PaperBroker:
@@ -98,7 +98,14 @@ class PaperBroker:
         )
         self.db.log_event("broker", f"Cashed out paper bet #{bet_id}.", {"pnl": round(pnl, 2), "reason": reason})
 
-    def settle_due_bets(self) -> None:
+    def settle_due_bets(self) -> dict[str, int]:
+        """Settles paper bets against real Cricsheet results only.
+
+        A bet never gets a fabricated winner: if Cricsheet hasn't caught up with
+        the real match yet, it stays 'open'. A linked match with no winner (tie,
+        no-result, abandoned) settles as void (pnl = 0), which is distinct from
+        "not resolved yet".
+        """
         open_bets = self.db.query(
             """
             SELECT b.*, f.team_a, f.team_b, f.match_date
@@ -107,18 +114,32 @@ class PaperBroker:
             WHERE b.status = 'open'
             """
         )
+        settled = voided = still_awaiting_result = 0
         for bet in open_bets:
             if date.fromisoformat(bet["match_date"]) > date.today():
                 continue
-            winner = _deterministic_winner(bet)
-            pnl = float(bet["stake"]) * (float(bet["odds"]) - 1) if bet["selection"] == winner else -float(bet["stake"])
+            match = link_fixture_to_cricsheet(
+                self.db, int(bet["fixture_id"]), bet["team_a"], bet["team_b"], bet["match_date"]
+            )
+            if not match:
+                still_awaiting_result += 1
+                continue
+            winner = resolve_winner_for_fixture(bet["team_a"], bet["team_b"], match)
+            if winner is None:
+                pnl = 0.0
+                notes = f"Voided: linked Cricsheet match {match['match_id']} had no winner (tie/no result)."
+                voided += 1
+            else:
+                pnl = float(bet["stake"]) * (float(bet["odds"]) - 1) if bet["selection"] == winner else -float(bet["stake"])
+                notes = f"Settled from Cricsheet match {match['match_id']}. Real winner: {winner}"
+                settled += 1
             self.db.execute(
                 """
                 UPDATE paper_bets
                 SET status = 'settled', closed_at = ?, pnl = ?, notes = ?
                 WHERE id = ?
                 """,
-                (utc_now(), round(pnl, 2), f"Paper settled. Simulated winner: {winner}", bet["id"]),
+                (utc_now(), round(pnl, 2), notes, bet["id"]),
             )
             self.db.execute(
                 """
@@ -127,7 +148,12 @@ class PaperBroker:
                 """,
                 (winner, bet["fixture_id"]),
             )
-            self.db.log_event("settlement", f"Settled paper bet #{bet['id']} with winner {winner}.", {"pnl": round(pnl, 2)})
+            self.db.log_event(
+                "settlement",
+                f"Settled paper bet #{bet['id']} from Cricsheet match {match['match_id']} (winner: {winner}).",
+                {"pnl": round(pnl, 2), "match_id": match["match_id"], "voided": winner is None},
+            )
+        return {"settled": settled, "voided": voided, "still_open_awaiting_result": still_awaiting_result}
 
     def _latest_odds(self, fixture_id: int, market: str, selection: str) -> float | None:
         row = self.db.query_one(
@@ -140,9 +166,3 @@ class PaperBroker:
             (fixture_id, market, selection),
         )
         return float(row["odds"]) if row else None
-
-
-def _deterministic_winner(bet: dict[str, Any]) -> str:
-    key = f"{bet['fixture_id']}|{bet['team_a']}|{bet['team_b']}|settle"
-    digest = hashlib.sha256(key.encode("utf-8")).hexdigest()
-    return bet["team_a"] if int(digest[:4], 16) % 2 == 0 else bet["team_b"]

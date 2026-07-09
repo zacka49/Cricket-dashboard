@@ -189,7 +189,7 @@ Global workflow actions live in the sidebar on every page:
 - `Monitor Tick`: simulates a live odds refresh, reruns predictions, and lets the Market Watch Agent hold or cash out paper bets.
 - `Fetch Live Odds`: imports current cricket match-winner prices into the prediction and market layers, using The Odds API as a fallback when the primary Bet365 feed is stale or empty.
 - `Pull All Live Data`: runs `Fetch Live Odds` plus a freshness-checked Cricsheet historical archive refresh in one action.
-- `Settle Paper`: settles due paper bets using deterministic demo results.
+- `Settle Paper`: settles a paper bet only once its fixture is linked to a real, confirmed Cricsheet result; bets on fixtures Cricsheet hasn't caught up with yet stay `open` rather than being given a guessed outcome. See Known Limitations.
 - `Reset Demo`: clears fixtures, predictions, paper bets, agent decisions, and logs, then rebuilds demo data.
 
 Model-retraining actions live contextually at the top of the **Models** page:

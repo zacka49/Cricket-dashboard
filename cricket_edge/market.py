@@ -13,6 +13,8 @@ import numpy as np
 from .config import SETTINGS
 from .data_sources import FreeDataSources
 from .database import Database, utc_now
+from .live_model import normalize_team_name
+from .match_linkage import link_fixture_to_cricsheet, resolve_winner_for_fixture
 from .odds_api_io import extract_match_winner_outcomes as extract_odds_api_io_match_winner_outcomes
 from .odds_api_io import parse_events, parse_sports
 from .odds_math import implied_probability
@@ -29,6 +31,7 @@ from .logistic_model import (
 
 CURRENT_MARKET_MODEL = "market_implied_current_v1"
 SYNTHETIC_MARKET_MODEL = "market_implied_synthetic_v1"
+HISTORICAL_MARKET_MODEL = "market_implied_historical_v1"
 BET365_SOURCE = "bet365"
 THE_ODDS_API_SOURCE = "the_odds_api"
 REAL_ODDS_SOURCES = {BET365_SOURCE, THE_ODDS_API_SOURCE}
@@ -42,12 +45,14 @@ def run_week4_market_build(db: Database, csv_path: Path | None = None) -> dict[s
     synced = sync_fixture_odds_to_market_snapshots(db)
     current = build_current_market_baselines(db)
     synthetic = build_synthetic_market_baseline(db)
+    historical_backfill = backfill_historical_market_baselines(db)
     clv = update_paper_bet_evaluations(db)
     return {
         "csv_import": imported,
         "fixture_odds_synced": synced,
         "current_market_baselines": current,
         "synthetic_market_baseline": synthetic,
+        "historical_market_backfill": historical_backfill,
         "paper_bet_clv": clv,
     }
 
@@ -400,6 +405,93 @@ def build_current_market_baselines(db: Database) -> dict[str, Any]:
             ),
         )
     return {"rows": len(rows)}
+
+
+def backfill_historical_market_baselines(db: Database) -> dict[str, Any]:
+    """Populates real, match_id-keyed market_baselines rows so the historical
+    strategy backtest has real data to work with.
+
+    Independently scans real-sourced fixtures rather than relying on
+    fixtures.status='complete' -- today that flag is only ever set by paper-bet
+    settlement, so most real fixtures never get it even long after the match.
+    Only inserts a row once a fixture is linked to a real Cricsheet match and has
+    at least one captured real odds snapshot; never fabricates a baseline.
+    """
+    fixtures = db.query(
+        """
+        SELECT * FROM fixtures
+        WHERE source IN ('bet365', 'the_odds_api') AND match_date <= date('now')
+        """
+    )
+    linked = inserted = skipped_no_match = 0
+    for fixture in fixtures:
+        match = link_fixture_to_cricsheet(
+            db, int(fixture["id"]), fixture["team_a"], fixture["team_b"], fixture["match_date"]
+        )
+        if not match:
+            skipped_no_match += 1
+            continue
+        linked += 1
+
+        odds_rows = db.query(
+            """
+            SELECT selection, odds, source, captured_at FROM odds_snapshots
+            WHERE fixture_id = ? AND market = 'match_winner' AND source IN ('bet365', 'the_odds_api')
+            ORDER BY captured_at ASC
+            """,
+            (fixture["id"],),
+        )
+        if not odds_rows:
+            continue
+        earliest_by_selection: dict[str, dict[str, Any]] = {}
+        for row in odds_rows:
+            earliest_by_selection.setdefault(row["selection"], row)
+
+        implied = {selection: 1.0 / float(row["odds"]) for selection, row in earliest_by_selection.items()}
+        overround = sum(implied.values()) if len(implied) >= 2 else 0.0
+        winner = resolve_winner_for_fixture(fixture["team_a"], fixture["team_b"], match)
+
+        for selection, row in earliest_by_selection.items():
+            normalized_selection = normalize_team_name(selection)
+            probability = implied[selection] / overround if overround > 0 else implied[selection]
+            result = None
+            if winner is not None:
+                result = 1.0 if normalized_selection == normalize_team_name(winner) else 0.0
+            db.execute(
+                """
+                INSERT OR IGNORE INTO market_baselines(
+                    model_name, scope, fixture_id, match_id, market, selection, probability,
+                    decimal_odds, overround, captured_at, result, brier, log_loss, correct, source
+                )
+                VALUES (?, 'historical_match', ?, ?, 'match_winner', ?, ?, ?, ?, ?, ?, NULL, NULL, NULL, ?)
+                """,
+                (
+                    HISTORICAL_MARKET_MODEL,
+                    fixture["id"],
+                    match["match_id"],
+                    normalized_selection,
+                    round(probability, 6),
+                    float(row["odds"]),
+                    round(overround, 4),
+                    row["captured_at"],
+                    result,
+                    row["source"],
+                ),
+            )
+            inserted += 1
+
+    result_summary = {
+        "fixtures_checked": len(fixtures),
+        "linked": linked,
+        "skipped_no_match": skipped_no_match,
+        "rows_inserted": inserted,
+    }
+    db.log_event(
+        "backtest",
+        f"Backfilled {inserted} historical market baseline rows from {linked} linked fixtures.",
+        result_summary,
+    )
+    return result_summary
 
 
 def build_synthetic_market_baseline(db: Database) -> dict[str, Any]:
