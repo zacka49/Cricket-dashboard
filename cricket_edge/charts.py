@@ -69,7 +69,7 @@ def _empty_chart(message: str) -> dict[str, Any]:
 def build_model_comparison_chart(db: Database) -> dict[str, Any]:
     rows = [row for row in (_latest_model_metrics(db, name) for name in COMPARISON_MODEL_NAMES) if row]
     if not rows:
-        return _empty_chart("No trained models yet. Train Elo, Logistic, and Week 3 models first.")
+        return _empty_chart("No trained models yet. Train Elo, Logistic, and Quant Research models first.")
 
     labels = [f"{row['model_name']}<br><span style='font-size:10px'>({row['scope']})</span>" for row in rows]
     fig = go.Figure()
@@ -88,7 +88,7 @@ def build_model_comparison_chart(db: Database) -> dict[str, Any]:
 def build_calibration_chart(db: Database) -> dict[str, Any]:
     active = db.query_one("SELECT model_name FROM model_registry WHERE active = 1 LIMIT 1")
     if not active:
-        return _empty_chart("No active model set yet. Run Train Week 3 to select one.")
+        return _empty_chart("No active model set yet. Run Force Retrain Now to select one.")
     model_name = str(active["model_name"])
     payload = _latest_payload(db, model_name)
     if not payload:
@@ -223,7 +223,7 @@ def build_backtest_pnl_chart(backtesting: dict[str, Any]) -> dict[str, Any]:
     payload = (backtesting or {}).get("payload") or {}
     recent = payload.get("recent_bets") or []
     if not recent:
-        return _empty_chart("No historical backtest bets yet. Run Week 4 after historical market baselines exist.")
+        return _empty_chart("No historical backtest bets yet. Run Rebuild Market Data after historical market baselines exist.")
     ordered = sorted(recent, key=lambda bet: (str(bet["match_date"]), str(bet["match_id"])))
     cumulative: list[float] = []
     running = 0.0

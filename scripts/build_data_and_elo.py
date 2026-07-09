@@ -16,7 +16,7 @@ from cricket_edge.elo import EloTrainer, latest_elo_report
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Week 1: ingest Cricsheet T20 data and train Elo.")
+    parser = argparse.ArgumentParser(description="Ingest Cricsheet T20 data and train the Elo baseline.")
     parser.add_argument("--limit", type=int, default=None, help="Optional number of Cricsheet files to parse.")
     parser.add_argument("--skip-download", action="store_true", help="Use an existing data/raw/cricsheet/t20s_json.zip.")
     args = parser.parse_args()

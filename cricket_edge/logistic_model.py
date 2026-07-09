@@ -83,7 +83,7 @@ class LogisticRegressionTrainer:
         self.db.init_schema()
         rows = build_feature_rows(self.db)
         if len(rows) < 200:
-            raise RuntimeError("Not enough Cricsheet/Elo rows to train logistic regression. Run Week 1 first.")
+            raise RuntimeError("Not enough Cricsheet/Elo rows to train logistic regression. Run the data pipeline build first.")
 
         n = len(rows)
         train_end = max(1, int(n * self.config.train_fraction))

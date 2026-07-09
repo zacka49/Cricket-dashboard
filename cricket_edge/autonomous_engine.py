@@ -42,11 +42,18 @@ class AutonomousEngine:
         self.app.settle()
 
         if self._retrain_due(state):
-            self.app.train_week3_models()
-            self.db.execute(
-                "UPDATE autonomous_state SET last_retrain_at = ?, last_retrain_match_count = ? WHERE id = 1",
-                (utc_now(), self._match_count()),
-            )
+            # Isolated from the rest of the tick: a retrain failure (e.g. not
+            # enough training data yet on a fresh system) must not prevent the
+            # heartbeat below from updating -- "alive" means the engine is
+            # ticking, not that every step succeeded.
+            try:
+                self.app.train_week3_models()
+                self.db.execute(
+                    "UPDATE autonomous_state SET last_retrain_at = ?, last_retrain_match_count = ? WHERE id = 1",
+                    (utc_now(), self._match_count()),
+                )
+            except Exception as exc:  # noqa: BLE001
+                self.db.log_event("autonomous_engine", f"Retrain failed: {exc}", {"error": str(exc)})
 
         self.db.execute("UPDATE autonomous_state SET last_tick_at = ?, updated_at = ? WHERE id = 1", (utc_now(), utc_now()))
         self.db.log_event("autonomous_engine", "Tick completed.", {})

@@ -80,6 +80,26 @@ def test_tick_retrains_on_first_ever_tick(tmp_path: Path) -> None:
     assert row["last_retrain_at"] is not None
 
 
+def test_tick_updates_heartbeat_even_when_retrain_fails(tmp_path: Path) -> None:
+    # Real-world case: a fresh system has no training data yet, so the first
+    # retrain attempt raises. The engine must still report itself alive --
+    # last_tick_at must not depend on the retrain step succeeding.
+    engine, fake = _make_engine(tmp_path)
+
+    def _failing_train() -> dict[str, Any]:
+        raise RuntimeError("not enough rows to train")
+
+    fake.train_week3_models = _failing_train  # type: ignore[method-assign]
+
+    engine.tick()
+
+    row = engine.db.query_one("SELECT * FROM autonomous_state WHERE id = 1")
+    assert row["last_tick_at"] is not None
+    assert row["last_retrain_at"] is None
+    events = engine.db.query("SELECT * FROM events WHERE type = 'autonomous_engine'")
+    assert any("Retrain failed" in row["message"] for row in events)
+
+
 def test_tick_does_not_retrain_again_immediately(tmp_path: Path) -> None:
     engine, fake = _make_engine(tmp_path)
     engine.tick()

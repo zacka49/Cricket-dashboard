@@ -15,7 +15,7 @@ from cricket_edge.market import run_week4_market_build
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Week 4: odds snapshots, market baseline, and CLV plumbing.")
+    parser = argparse.ArgumentParser(description="Build odds snapshots, market baselines, and CLV plumbing.")
     parser.add_argument("--csv", type=Path, default=None, help="Optional manual odds CSV to import.")
     args = parser.parse_args()
     db = Database()

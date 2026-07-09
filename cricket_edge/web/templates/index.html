@@ -22,11 +22,16 @@
           Paper mode only
         </div>
 
+        <div class="mode-banner" id="autonomousBanner">
+          <span class="dot" id="autonomousDot"></span>
+          <span id="autonomousText">Autonomous mode: checking&hellip;</span>
+        </div>
+
         <nav class="nav-list" id="pageNav">
-          <button class="nav-link active" data-page="overview">Overview</button>
-          <button class="nav-link" data-page="models">Models</button>
-          <button class="nav-link" data-page="bets">Paper Bets</button>
-          <button class="nav-link" data-page="data">Data &amp; Logs</button>
+          <button class="nav-link active" data-page="overview">Trading Floor</button>
+          <button class="nav-link" data-page="models">Quant Research</button>
+          <button class="nav-link" data-page="bets">Positions</button>
+          <button class="nav-link" data-page="data">Ops &amp; Compliance</button>
         </nav>
 
         <div class="control-stack">
@@ -118,8 +123,8 @@
               <div class="inline-actions">
                 <button id="trainElo">Train Elo</button>
                 <button id="trainLogistic">Train Logistic</button>
-                <button id="trainWeek3">Train Week 3</button>
-                <button id="runWeek4">Run Week 4</button>
+                <button id="trainWeek3">Force Retrain Now</button>
+                <button id="runWeek4">Rebuild Market Data</button>
               </div>
             </div>
             <div id="trainingDataPanel"></div>
@@ -154,7 +159,7 @@
                   <h3>Model Status</h3>
                 </div>
               </div>
-              <div id="weekThreePanel"></div>
+              <div id="modelGovernancePanel"></div>
             </div>
           </div>
 
@@ -272,7 +277,7 @@
               </div>
               <span class="pill">Paper only</span>
             </div>
-            <div id="weekFourPanel"></div>
+            <div id="marketDataPanel"></div>
           </div>
 
           <section class="panel" id="logs">

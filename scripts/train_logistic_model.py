@@ -15,7 +15,7 @@ from cricket_edge.logistic_model import LogisticRegressionTrainer, latest_week2_
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Week 2: train logistic regression and compare against Elo.")
+    parser = argparse.ArgumentParser(description="Train logistic regression and compare it against Elo.")
     parser.add_argument("--retrain-elo", action="store_true", help="Retrain the Elo baseline before logistic regression.")
     args = parser.parse_args()
 

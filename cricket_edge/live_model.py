@@ -29,8 +29,8 @@ def load_live_model_snapshot(db: Database, model_name: str = PRETOSS_MODEL_NAME)
     """Latest trained coefficients/calibrator for a logistic model, plus current
     Elo ratings and cumulative team stats needed to build live features.
 
-    Returns None if the model hasn't been trained yet (fresh checkout, Week 1-3
-    scripts never run) so callers can fall back rather than crash.
+    Returns None if the model hasn't been trained yet (fresh checkout, data
+    pipeline/training scripts never run) so callers can fall back rather than crash.
     """
     latest = db.query_one(
         """

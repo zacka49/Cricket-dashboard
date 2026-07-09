@@ -13,10 +13,12 @@ const ACTION_BUTTON_IDS = [
 ];
 
 const PIPELINE_STAGES = [
-  { key: "data_steward", label: "Data Steward", role: "Checks fixtures, odds, and predictions exist before anything else runs." },
-  { key: "bet_decision_agent", label: "Bet Decision", role: "Reads predictions, applies hard risk rules, optionally asks a local LLM to explain, then places paper bets." },
-  { key: "market_watch_agent", label: "Market Watch", role: "Watches open paper bets and simulates cash-out when odds move far enough." },
-  { key: "report_writer_agent", label: "Report Writer", role: "Writes the daily briefing from account state and top model edges." },
+  { key: "data_steward", label: "Chief Data Officer", role: "Checks fixtures, odds, and predictions exist before anything else runs." },
+  { key: "bet_decision_agent", label: "Trading Desk", role: "Reads predictions, applies hard risk rules, optionally asks a local LLM to explain, then proposes paper bets." },
+  { key: "portfolio_oversight_agent", label: "Chief Risk Officer", role: "Reviews every proposed bet, and vetoes it if data health is flagged or a portfolio-level stake cap is exceeded." },
+  { key: "market_watch_agent", label: "Trading Desk — Position Monitoring", role: "Watches open paper bets and simulates cash-out when odds move far enough." },
+  { key: "report_writer_agent", label: "Chief Operating Officer", role: "Writes the daily briefing from account state and top model edges." },
+  { key: "model_governance_agent", label: "Head of Quant Research", role: "Retrains candidate models on a schedule and only promotes one that actually beats the incumbent." },
 ];
 
 const PAGE_TITLES = {
@@ -93,6 +95,7 @@ function render() {
   document.getElementById("lastUpdated").textContent = `Updated ${new Date().toLocaleTimeString()}`;
 
   renderMetrics(data.account);
+  renderAutonomousBanner(data.autonomous || {});
   renderAgentPipeline(data.decisions);
   renderBriefing(data.decisions);
   renderReadiness(data.readiness || {});
@@ -142,6 +145,25 @@ function renderMetrics(account) {
       <div class="metric-sub">${escapeHtml(sub)}</div>
     </article>
   `).join("");
+}
+
+function renderAutonomousBanner(autonomous) {
+  const dot = document.getElementById("autonomousDot");
+  const text = document.getElementById("autonomousText");
+  if (!autonomous.enabled) {
+    dot.className = "dot bad";
+    text.textContent = "Autonomous mode: disabled";
+    return;
+  }
+  if (!autonomous.alive) {
+    dot.className = "dot warn";
+    text.textContent = "Autonomous mode: starting…";
+    return;
+  }
+  dot.className = "dot";
+  const lastTick = autonomous.last_tick_at ? new Date(autonomous.last_tick_at).toLocaleTimeString() : "-";
+  const lastRetrain = autonomous.last_retrain_at ? new Date(autonomous.last_retrain_at).toLocaleTimeString() : "never yet";
+  text.textContent = `Autonomous mode: running (last tick ${lastTick}, last retrain ${lastRetrain})`;
 }
 
 function renderAgentPipeline(decisions) {
@@ -236,7 +258,7 @@ function renderTrainingData(week1, week2) {
   const eloPayload = elo.payload || {};
   const logistic = (week2.logistic || {}).payload || {};
   if (!cricsheet.matches) {
-    document.getElementById("trainingDataPanel").innerHTML = `<div class="loading">No Cricsheet data ingested yet. Run <code>scripts\\week1_build.py</code>.</div>`;
+    document.getElementById("trainingDataPanel").innerHTML = `<div class="loading">No Cricsheet data ingested yet. Run <code>scripts\\build_data_and_elo.py</code>.</div>`;
     return;
   }
   const rows = `
@@ -252,8 +274,8 @@ function renderTrainingData(week1, week2) {
 function renderModelRegistry(week3) {
   const registry = week3.registry || [];
   if (!registry.length) {
-    document.getElementById("weekThreePanel").innerHTML = `
-      <div class="loading">No model registry yet. Run <code>scripts\\week3_build.py</code> or click Train Week 3.</div>
+    document.getElementById("modelGovernancePanel").innerHTML = `
+      <div class="loading">No model registry yet. Run <code>scripts\\train_and_govern_models.py</code> or click Force Retrain Now.</div>
     `;
     return;
   }
@@ -269,7 +291,7 @@ function renderModelRegistry(week3) {
       </tr>
     `;
   }).join("");
-  document.getElementById("weekThreePanel").innerHTML = table(["Status", "Model"], rows);
+  document.getElementById("modelGovernancePanel").innerHTML = table(["Status", "Model"], rows);
 }
 
 function renderBacktestSummary(backtesting) {
@@ -419,7 +441,7 @@ function renderClv(evaluations) {
   `).join("");
   document.getElementById("clvPanel").innerHTML = rows
     ? table(["Selection", "Match", "Entry", "Close", "CLV"], rows)
-    : `<div class="loading">No paper CLV evaluations yet. Run Week 4 after paper bets and odds snapshots exist.</div>`;
+    : `<div class="loading">No paper CLV evaluations yet. Run Rebuild Market Data after paper bets and odds snapshots exist.</div>`;
 }
 
 function renderDataLogs(week4) {
@@ -467,7 +489,7 @@ function renderDataLogs(week4) {
       <td>${escapeHtml(item.captured_at || "-")}</td>
     </tr>
   `).join("");
-  document.getElementById("weekFourPanel").innerHTML = `
+  document.getElementById("marketDataPanel").innerHTML = `
     ${table(["Metric", "Value"], panelRows)}
     <h4 class="section-title">Odds Sources</h4>
     ${sourceRows ? table(["Source", "Rows", "Fixtures", "Latest"], sourceRows) : `<div class="loading">No market odds captured yet.</div>`}

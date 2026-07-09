@@ -28,6 +28,7 @@ from .logistic_model import (
 GB_MODEL_NAME = "t20_gradient_boosting_posttoss_calibrated_v1"
 GOVERNANCE_MODEL_NAMES = [PRETOSS_MODEL_NAME, POSTTOSS_MODEL_NAME, GB_MODEL_NAME]
 MODEL_GOVERNANCE_AGENT_NAME = "model_governance_agent"
+MODEL_GOVERNANCE_ROLE_TITLE = "Head of Quant Research"
 
 
 @dataclass(frozen=True)

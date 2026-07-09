@@ -13,6 +13,7 @@ from .risk import evaluate_candidate
 
 class DataStewardAgent:
     name = "data_steward"
+    role_title = "Chief Data Officer"
 
     def __init__(self, db: Database) -> None:
         self.db = db
@@ -62,6 +63,7 @@ class DataStewardAgent:
 
 class BetDecisionAgent:
     name = "bet_decision_agent"
+    role_title = "Trading Desk"
 
     def __init__(self, db: Database, llm: LocalLLMClient | None = None) -> None:
         self.db = db
@@ -185,6 +187,7 @@ class PortfolioOversightAgent:
     output can be overridden by another, with its own audit trail row."""
 
     name = "portfolio_oversight_agent"
+    role_title = "Chief Risk Officer"
 
     def __init__(self, db: Database, portfolio_cap_fraction: float | None = None) -> None:
         self.db = db
@@ -257,6 +260,7 @@ class PortfolioOversightAgent:
 
 class MarketWatchAgent:
     name = "market_watch_agent"
+    role_title = "Trading Desk — Position Monitoring"
 
     def __init__(self, db: Database) -> None:
         self.db = db
@@ -318,6 +322,7 @@ class MarketWatchAgent:
 
 class ReportWriterAgent:
     name = "report_writer_agent"
+    role_title = "Chief Operating Officer"
 
     def __init__(self, db: Database) -> None:
         self.db = db
