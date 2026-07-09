@@ -57,7 +57,9 @@ def load_live_model_snapshot(db: Database, model_name: str = PRETOSS_MODEL_NAME)
     }
 
 
-def build_live_match_features(fixture: dict[str, Any], snapshot: dict[str, Any]) -> dict[str, Any]:
+def build_live_match_features(
+    fixture: dict[str, Any], snapshot: dict[str, Any], db: Database | None = None
+) -> dict[str, Any]:
     team_a = normalize_team_name(fixture["team_a"])
     team_b = normalize_team_name(fixture["team_b"])
     elo_ratings = snapshot["elo_ratings"]
@@ -69,6 +71,10 @@ def build_live_match_features(fixture: dict[str, Any], snapshot: dict[str, Any])
     stats_b = team_stats.get(team_b)
     matches_a = int(stats_a["matches"]) if stats_a else 0
     matches_b = int(stats_b["matches"]) if stats_b else 0
+
+    if db is not None:
+        _log_unmatched_team(db, fixture["team_a"], team_a, matches_a)
+        _log_unmatched_team(db, fixture["team_b"], team_b, matches_b)
 
     match_date = str(fixture.get("match_date") or date.today().isoformat())
     competition = str(fixture.get("competition") or "")
@@ -133,6 +139,29 @@ def data_confidence_factor(feature_context: dict[str, Any]) -> float:
     if known >= MIN_MATCHES_FOR_FULL_CONFIDENCE:
         return 1.0
     return max(0.0, known / MIN_MATCHES_FOR_FULL_CONFIDENCE)
+
+
+def _log_unmatched_team(db: Database, raw_name: str, normalized_name: str, historical_matches: int) -> None:
+    """Surfaces a likely TEAM_NAME_ALIASES gap instead of guessing new entries.
+
+    A team with zero Cricsheet history after normalization either needs a new
+    alias, or genuinely has no coverage -- either way a human should see it on
+    the Data & Logs feed rather than the model silently falling back to a
+    neutral prior with no visibility into why.
+    """
+    if historical_matches > 0:
+        return
+    alias_applied = raw_name != normalized_name
+    detail = (
+        f"'{raw_name}' normalized to '{normalized_name}' but still has zero Cricsheet history."
+        if alias_applied
+        else f"'{raw_name}' has zero Cricsheet history and no TEAM_NAME_ALIASES entry exists."
+    )
+    db.log_event(
+        "diagnostics",
+        f"Unmatched team for live prediction: {detail}",
+        {"raw_name": raw_name, "normalized_name": normalized_name, "alias_applied": alias_applied},
+    )
 
 
 def _win_rate(stats: dict[str, Any] | None) -> float:

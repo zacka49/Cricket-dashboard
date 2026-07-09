@@ -73,7 +73,7 @@ class PredictionEngine:
             "DELETE FROM predictions WHERE fixture_id = ? AND model_name != ?",
             (fixture["id"], snapshot["model_name"]),
         )
-        context = build_live_match_features(fixture, snapshot)
+        context = build_live_match_features(fixture, snapshot, self.db)
         prob_a = predict_probability(snapshot, context["features"])
         confidence_scale = data_confidence_factor(context)
         prob_a = min(0.96, max(0.04, prob_a))
