@@ -176,6 +176,13 @@ CREATE TABLE IF NOT EXISTS cricsheet_matches (
     inserted_at TEXT NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS fixture_cricsheet_links (
+    fixture_id INTEGER PRIMARY KEY REFERENCES fixtures(id) ON DELETE CASCADE,
+    match_id TEXT NOT NULL REFERENCES cricsheet_matches(match_id) ON DELETE CASCADE,
+    linked_at TEXT NOT NULL,
+    match_method TEXT NOT NULL DEFAULT 'team_date_exact'
+);
+
 CREATE TABLE IF NOT EXISTS cricsheet_innings (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     match_id TEXT NOT NULL REFERENCES cricsheet_matches(match_id) ON DELETE CASCADE,
@@ -321,6 +328,7 @@ CREATE INDEX IF NOT EXISTS idx_bets_status ON paper_bets(status);
 CREATE INDEX IF NOT EXISTS idx_events_timestamp ON events(timestamp);
 CREATE INDEX IF NOT EXISTS idx_cricsheet_matches_date ON cricsheet_matches(match_date);
 CREATE INDEX IF NOT EXISTS idx_cricsheet_matches_teams ON cricsheet_matches(team_a, team_b);
+CREATE INDEX IF NOT EXISTS idx_fixture_cricsheet_links_match ON fixture_cricsheet_links(match_id);
 CREATE INDEX IF NOT EXISTS idx_team_elo_date ON team_elo_history(match_date);
 CREATE INDEX IF NOT EXISTS idx_model_predictions_model ON model_predictions(model_name, split, match_date);
 CREATE INDEX IF NOT EXISTS idx_model_registry_active ON model_registry(active, status);
