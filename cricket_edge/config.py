@@ -50,6 +50,13 @@ def _env_int(name: str, default: int) -> int:
         return default
 
 
+def _env_bool(name: str, default: bool) -> bool:
+    raw = os.getenv(name)
+    if not raw:
+        return default
+    return raw.strip().lower() in ("1", "true", "yes", "on")
+
+
 @dataclass(frozen=True)
 class Settings:
     """Runtime configuration.
@@ -94,6 +101,12 @@ class Settings:
     bet365_base_url: str = os.getenv("BET365_BASE_URL", "https://api.b365api.com")
     bet365_auth_param: str = os.getenv("BET365_AUTH_PARAM", "token")
     bet365_max_events: int = _env_int("BET365_MAX_EVENTS", 25)
+    autonomous_enabled: bool = _env_bool("CRICKET_EDGE_AUTONOMOUS_ENABLED", True)
+    autonomous_tick_seconds: int = _env_int("CRICKET_EDGE_AUTONOMOUS_TICK_SECONDS", 300)
+    autonomous_retrain_interval_hours: int = _env_int("CRICKET_EDGE_AUTONOMOUS_RETRAIN_INTERVAL_HOURS", 24)
+    autonomous_retrain_new_match_threshold: int = _env_int(
+        "CRICKET_EDGE_AUTONOMOUS_RETRAIN_NEW_MATCH_THRESHOLD", 20
+    )
 
 
 def ensure_directories() -> None:

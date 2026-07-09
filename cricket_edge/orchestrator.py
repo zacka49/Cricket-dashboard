@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import datetime, timezone
 from typing import Any
 
 from .agents import (
@@ -12,6 +13,7 @@ from .agents import (
 from .advanced_models import latest_week3_report, train_and_evaluate_models
 from .backtesting import latest_backtest_report, run_latest_strategy_backtest
 from .charts import build_all_charts
+from .config import SETTINGS
 from .database import Database
 from .elo import EloTrainer, latest_elo_report
 from .live_data import pull_all_live_data
@@ -189,6 +191,16 @@ def build_state(db: Database) -> dict[str, Any]:
         "week4": latest_week4_report(db),
         "backtesting": latest_backtest_report(db),
         "readiness": portfolio_readiness_report(db),
+        "autonomous": _autonomous_state(db),
     }
     state["charts"] = build_all_charts(db, state)
     return state
+
+
+def _autonomous_state(db: Database) -> dict[str, Any]:
+    row = db.query_one("SELECT * FROM autonomous_state WHERE id = 1")
+    if not row or not row["last_tick_at"]:
+        return {"enabled": SETTINGS.autonomous_enabled, "alive": False}
+    last_tick = datetime.fromisoformat(str(row["last_tick_at"]).replace("Z", "+00:00"))
+    alive = (datetime.now(timezone.utc) - last_tick).total_seconds() <= 2 * SETTINGS.autonomous_tick_seconds
+    return dict(row) | {"enabled": SETTINGS.autonomous_enabled, "alive": alive}

@@ -73,6 +73,15 @@ CREATE TABLE IF NOT EXISTS paper_account (
     created_at TEXT NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS autonomous_state (
+    id INTEGER PRIMARY KEY CHECK (id = 1),
+    last_tick_at TEXT,
+    last_morning_run_date TEXT,
+    last_retrain_at TEXT,
+    last_retrain_match_count INTEGER NOT NULL DEFAULT 0,
+    updated_at TEXT NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS fixtures (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     match_date TEXT NOT NULL,
