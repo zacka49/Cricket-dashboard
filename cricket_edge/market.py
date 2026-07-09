@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import concurrent.futures
 import csv
 import hashlib
 import json
@@ -129,11 +130,67 @@ def _fetch_odds_api_io_bet365_cricket_odds(db: Database) -> dict[str, Any]:
         if event_id:
             events_by_id[event_id] = event
 
-    for event in list(events_by_id.values())[:max_events]:
+    selected_events = list(events_by_id.values())[:max_events]
+
+    # Phase 1: sequential fixture upserts. Cheap DB writes, and must happen before
+    # any network call so we know which events are even viable to fetch odds for.
+    fixture_by_event_id: dict[str, int] = {}
+    for event in selected_events:
         fetched_events += 1
         try:
-            fixture_id = _upsert_bet365_fixture(db, event, status_override=_odds_api_io_fixture_status(event))
-            payload = source.fetch_odds_api_io_event_odds(event["id"], bookmakers=bookmakers)
+            fixture_by_event_id[str(event.get("id", ""))] = _upsert_bet365_fixture(
+                db, event, status_override=_odds_api_io_fixture_status(event)
+            )
+        except Exception as exc:
+            errors.append({"stage": "event_odds", "event_id": str(event.get("id", "")), "error": str(exc)})
+
+    # Phase 2: bounded-concurrency network calls only, no DB writes inside worker
+    # threads. An overall time budget means a slow/rate-limited API can't hang the
+    # whole run for minutes -- unfinished calls are recorded as timeouts instead.
+    viable_events = [event for event in selected_events if str(event.get("id", "")) in fixture_by_event_id]
+    odds_payload_by_event_id: dict[str, dict[str, Any]] = {}
+    if viable_events:
+        max_workers = max(1, getattr(SETTINGS, "odds_api_max_workers", 6))
+        overall_timeout = getattr(SETTINGS, "odds_api_overall_timeout_seconds", 45)
+        # Not using `with` here deliberately: ThreadPoolExecutor.__exit__ calls
+        # shutdown(wait=True), which would block on any still-running thread and
+        # defeat the whole point of the overall timeout below. shutdown(wait=False)
+        # lets this function return promptly; any thread still running past the
+        # budget is abandoned rather than waited on.
+        pool = concurrent.futures.ThreadPoolExecutor(max_workers=max_workers)
+        try:
+            future_to_event = {
+                pool.submit(source.fetch_odds_api_io_event_odds, event["id"], bookmakers=bookmakers): event
+                for event in viable_events
+            }
+            done, not_done = concurrent.futures.wait(future_to_event, timeout=overall_timeout)
+            for future in not_done:
+                event = future_to_event[future]
+                errors.append(
+                    {
+                        "stage": "event_odds_timeout",
+                        "event_id": str(event.get("id", "")),
+                        "error": f"exceeded overall {overall_timeout}s odds-fetch budget",
+                    }
+                )
+            for future in done:
+                event = future_to_event[future]
+                event_id = str(event.get("id", ""))
+                try:
+                    odds_payload_by_event_id[event_id] = future.result()
+                except Exception as exc:
+                    errors.append({"stage": "event_odds", "event_id": event_id, "error": str(exc)})
+        finally:
+            pool.shutdown(wait=False, cancel_futures=True)
+
+    # Phase 3: sequential parse + DB writes, single-threaded to avoid concurrent
+    # sqlite writes.
+    for event in viable_events:
+        event_id = str(event.get("id", ""))
+        payload = odds_payload_by_event_id.get(event_id)
+        if payload is None:
+            continue
+        try:
             outcomes = [
                 outcome.model_dump(mode="json")
                 for outcome in extract_odds_api_io_match_winner_outcomes(
@@ -143,14 +200,14 @@ def _fetch_odds_api_io_bet365_cricket_odds(db: Database) -> dict[str, Any]:
             ]
             inserted_odds += _insert_bet365_odds(
                 db,
-                fixture_id,
+                fixture_by_event_id[event_id],
                 event,
                 outcomes,
                 payload["data"],
                 is_live=str(event.get("status", "")).lower() == "live",
             )
         except Exception as exc:
-            errors.append({"stage": "event_odds", "event_id": str(event.get("id", "")), "error": str(exc)})
+            errors.append({"stage": "event_odds", "event_id": event_id, "error": str(exc)})
 
     normalize_market_snapshot_probabilities(db)
     build_current_market_baselines(db)

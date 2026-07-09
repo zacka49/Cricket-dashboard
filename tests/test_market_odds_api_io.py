@@ -1,3 +1,4 @@
+import time
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
@@ -71,6 +72,12 @@ class MalformedDateSource(FakeOddsSource):
         payload = super().fetch_odds_api_io_events(sport, status, limit)
         payload["data"][0]["date"] = "not-a-date"
         return payload
+
+
+class SlowEventOddsSource(FakeOddsSource):
+    def fetch_odds_api_io_event_odds(self, event_id: str | int, bookmakers: str) -> dict:
+        time.sleep(2)
+        return super().fetch_odds_api_io_event_odds(event_id, bookmakers)
 
 
 class EmptyPrimaryWithTheOddsApiFallbackSource(FakeOddsSource):
@@ -248,6 +255,29 @@ def test_fetch_live_cricket_odds_falls_back_to_the_odds_api(tmp_path: Path) -> N
     assert [row["selection"] for row in rows] == ["Somerset", "Surrey"]
     assert [row["bookmaker"] for row in market_rows] == ["Paddy Power", "Paddy Power"]
     assert [round(row["normalized_probability"], 4) for row in market_rows] == [0.443, 0.557]
+
+
+def test_fetch_bet365_cricket_odds_times_out_a_slow_event_instead_of_hanging(tmp_path: Path) -> None:
+    settings = SimpleNamespace(
+        odds_api_key="test-key",
+        odds_api_max_events=5,
+        odds_api_io_sport="cricket",
+        odds_api_bookmakers="Bet365",
+        odds_stale_minutes=30,
+        odds_api_max_workers=2,
+        odds_api_overall_timeout_seconds=0.2,
+    )
+    db = Database(tmp_path / "market.sqlite3")
+
+    started = time.monotonic()
+    with patch("cricket_edge.market.SETTINGS", settings), patch("cricket_edge.market.FreeDataSources", SlowEventOddsSource):
+        result = fetch_bet365_cricket_odds(db)
+    elapsed = time.monotonic() - started
+
+    assert elapsed < 2.0
+    assert result["ok"] is False
+    assert result["odds_rows_inserted"] == 0
+    assert {error["stage"] for error in result["errors"]} == {"event_odds_timeout"}
 
 
 def test_latest_week4_report_tolerates_corrupt_model_run_payload(tmp_path: Path) -> None:

@@ -78,6 +78,8 @@ class Settings:
     odds_api_io_base_url: str = os.getenv("ODDS_API_IO_BASE_URL", "https://api.odds-api.io/v3")
     odds_api_io_sport: str = os.getenv("ODDS_API_IO_SPORT", "cricket")
     odds_api_max_events: int = _env_int("ODDS_API_MAX_EVENTS", 25)
+    odds_api_max_workers: int = _env_int("ODDS_API_MAX_WORKERS", 6)
+    odds_api_overall_timeout_seconds: int = _env_int("ODDS_API_OVERALL_TIMEOUT_SECONDS", 45)
     the_odds_api_key: str = os.getenv("THE_ODDS_API_KEY", "")
     the_odds_api_base_url: str = os.getenv("THE_ODDS_API_BASE_URL", "https://api.the-odds-api.com")
     the_odds_api_regions: str = os.getenv("THE_ODDS_API_REGIONS", "uk,eu,au")
