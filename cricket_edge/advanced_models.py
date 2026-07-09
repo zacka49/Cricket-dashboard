@@ -26,7 +26,8 @@ from .logistic_model import (
 
 
 GB_MODEL_NAME = "t20_gradient_boosting_posttoss_calibrated_v1"
-WEEK3_MODEL_NAMES = [PRETOSS_MODEL_NAME, POSTTOSS_MODEL_NAME, GB_MODEL_NAME]
+GOVERNANCE_MODEL_NAMES = [PRETOSS_MODEL_NAME, POSTTOSS_MODEL_NAME, GB_MODEL_NAME]
+MODEL_GOVERNANCE_AGENT_NAME = "model_governance_agent"
 
 
 @dataclass(frozen=True)
@@ -38,14 +39,19 @@ class StumpBoostingConfig:
     threshold_count: int = 16
 
 
-def train_week3_models(db: Database) -> dict[str, Any]:
+def train_and_evaluate_models(db: Database) -> dict[str, Any]:
+    """Trains candidate models and promotes the pre-toss model only if it
+    actually beats whatever is currently active -- retraining alone never
+    changes what's live for paper trading."""
+    incumbent = _read_incumbent(db)
+
     pretoss = LogisticRegressionTrainer(
         db,
         model_name=PRETOSS_MODEL_NAME,
         feature_names=BASE_FEATURE_NAMES,
         timing="pre_toss",
         calibrated=True,
-        notes="Week 3 candidate: morning/pre-toss calibrated logistic model.",
+        notes="Quant Research candidate: morning/pre-toss calibrated logistic model.",
     ).train()
     posttoss = LogisticRegressionTrainer(
         db,
@@ -53,17 +59,77 @@ def train_week3_models(db: Database) -> dict[str, Any]:
         feature_names=BASE_FEATURE_NAMES + TOSS_FEATURE_NAMES,
         timing="post_toss",
         calibrated=True,
-        notes="Week 3 candidate: post-toss calibrated logistic model.",
+        notes="Quant Research candidate: post-toss calibrated logistic model.",
     ).train()
     boosted = StumpGradientBoostingTrainer(db).train()
-    set_active_model(db, PRETOSS_MODEL_NAME, "Active for paper mode because morning automation must not rely on toss data.")
+
+    promotion = _evaluate_promotion(db, incumbent, PRETOSS_MODEL_NAME, float(pretoss["splits"]["test"]["brier"]))
     return {
         "pretoss_logistic": pretoss,
         "posttoss_logistic": posttoss,
         "gradient_boosting": boosted,
-        "active_model": PRETOSS_MODEL_NAME,
+        "active_model": promotion["active_model"],
+        "promotion": promotion,
         "comparison": model_comparison(db),
     }
+
+
+def _read_incumbent(db: Database) -> dict[str, Any] | None:
+    row = db.query_one("SELECT model_name FROM model_registry WHERE active = 1 LIMIT 1")
+    if not row:
+        return None
+    run = db.query_one(
+        "SELECT payload_json FROM model_runs WHERE model_name = ? ORDER BY generated_at DESC, id DESC LIMIT 1",
+        (row["model_name"],),
+    )
+    test_brier = float(json.loads(run["payload_json"])["splits"]["test"]["brier"]) if run else None
+    return {"model_name": row["model_name"], "test_brier": test_brier}
+
+
+def _evaluate_promotion(
+    db: Database, incumbent: dict[str, Any] | None, candidate_name: str, candidate_test_brier: float
+) -> dict[str, Any]:
+    incumbent_name = incumbent["model_name"] if incumbent else None
+    incumbent_brier = incumbent["test_brier"] if incumbent else None
+    promote = incumbent_brier is None or candidate_test_brier < incumbent_brier
+
+    if promote and incumbent_name:
+        reason = f"Candidate {candidate_name} test_brier={candidate_test_brier:.4f} beats incumbent {incumbent_name} ({incumbent_brier:.4f})."
+    elif promote:
+        reason = f"No active model yet; promoting {candidate_name} (test_brier={candidate_test_brier:.4f})."
+    else:
+        reason = (
+            f"Candidate {candidate_name} test_brier={candidate_test_brier:.4f} did not beat incumbent "
+            f"{incumbent_name} ({incumbent_brier:.4f}); keeping incumbent active."
+        )
+    winner_name = candidate_name if promote else incumbent_name
+    # Always re-apply, even when retaining the incumbent: upsert_model_registry
+    # unconditionally sets active=0 on whatever row a trainer just wrote, so if the
+    # incumbent is the same model_name just retrained, its own active flag was
+    # silently reset to 0 above and must be explicitly restored.
+    set_active_model(db, winner_name, reason)
+
+    payload = {
+        "incumbent_model": incumbent_name,
+        "incumbent_test_brier": incumbent_brier,
+        "candidate_model": candidate_name,
+        "candidate_test_brier": candidate_test_brier,
+        "promoted": promote,
+    }
+    db.execute(
+        """
+        INSERT INTO agent_decisions(fixture_id, agent_name, generated_at, decision, stake, confidence, reason, payload_json)
+        VALUES (NULL, ?, ?, ?, 0, 0, ?, ?)
+        """,
+        (
+            MODEL_GOVERNANCE_AGENT_NAME,
+            utc_now(),
+            "promoted" if promote else "retained_incumbent",
+            reason,
+            json.dumps(payload, sort_keys=True),
+        ),
+    )
+    return payload | {"active_model": winner_name}
 
 
 class StumpGradientBoostingTrainer:
@@ -75,7 +141,7 @@ class StumpGradientBoostingTrainer:
     def train(self) -> dict[str, Any]:
         rows = build_feature_rows(self.db)
         if len(rows) < 200:
-            raise RuntimeError("Not enough feature rows to train gradient boosting. Run Week 1 first.")
+            raise RuntimeError("Not enough feature rows to train gradient boosting. Run the data pipeline build first.")
 
         n = len(rows)
         train_end = max(1, int(n * self.config.train_fraction))
@@ -155,7 +221,7 @@ class StumpGradientBoostingTrainer:
             calibrated=1,
             feature_names=self.feature_names,
             metrics=metrics,
-            notes="Week 3 nonlinear benchmark using in-repo boosted decision stumps.",
+            notes="Quant Research nonlinear benchmark using in-repo boosted decision stumps.",
         )
         self.db.log_event("model", f"Trained gradient boosting model {GB_MODEL_NAME}.", metrics)
         return metrics

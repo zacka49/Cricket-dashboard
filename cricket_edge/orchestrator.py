@@ -9,7 +9,7 @@ from .agents import (
     PortfolioOversightAgent,
     ReportWriterAgent,
 )
-from .advanced_models import latest_week3_report, train_week3_models
+from .advanced_models import latest_week3_report, train_and_evaluate_models
 from .backtesting import latest_backtest_report, run_latest_strategy_backtest
 from .charts import build_all_charts
 from .database import Database
@@ -74,7 +74,7 @@ class CricketEdgeOrchestrator:
         return LogisticRegressionTrainer(self.db).train()
 
     def train_week3_models(self) -> dict[str, Any]:
-        return train_week3_models(self.db)
+        return train_and_evaluate_models(self.db)
 
     def run_week4_market(self) -> dict[str, Any]:
         result = run_week4_market_build(self.db)
