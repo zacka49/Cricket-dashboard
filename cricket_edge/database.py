@@ -73,7 +73,7 @@ CREATE TABLE IF NOT EXISTS paper_account (
     created_at TEXT NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS autonomous_state (
+CREATE TABLE IF NOT EXISTS scheduler_state (
     id INTEGER PRIMARY KEY CHECK (id = 1),
     last_tick_at TEXT,
     last_morning_run_date TEXT,
@@ -125,10 +125,10 @@ CREATE TABLE IF NOT EXISTS predictions (
     UNIQUE(fixture_id, model_name, market, selection)
 );
 
-CREATE TABLE IF NOT EXISTS agent_decisions (
+CREATE TABLE IF NOT EXISTS decision_log (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     fixture_id INTEGER REFERENCES fixtures(id) ON DELETE SET NULL,
-    agent_name TEXT NOT NULL,
+    source TEXT NOT NULL,
     generated_at TEXT NOT NULL,
     decision TEXT NOT NULL,
     stake REAL NOT NULL DEFAULT 0,
@@ -140,7 +140,7 @@ CREATE TABLE IF NOT EXISTS agent_decisions (
 CREATE TABLE IF NOT EXISTS paper_bets (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     fixture_id INTEGER NOT NULL REFERENCES fixtures(id) ON DELETE CASCADE,
-    decision_id INTEGER REFERENCES agent_decisions(id) ON DELETE SET NULL,
+    decision_id INTEGER REFERENCES decision_log(id) ON DELETE SET NULL,
     market TEXT NOT NULL,
     selection TEXT NOT NULL,
     stake REAL NOT NULL,

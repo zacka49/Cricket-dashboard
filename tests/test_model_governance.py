@@ -1,7 +1,7 @@
 import json
 from pathlib import Path
 
-from cricket_edge.advanced_models import MODEL_GOVERNANCE_AGENT_NAME, _evaluate_promotion, _read_incumbent
+from cricket_edge.advanced_models import MODEL_GOVERNANCE_NAME, _evaluate_promotion, _read_incumbent
 from cricket_edge.database import Database, utc_now
 
 
@@ -57,7 +57,7 @@ def test_promotes_candidate_with_lower_brier(tmp_path: Path) -> None:
 
     assert result["promoted"] is True
     assert result["active_model"] == "new_model"
-    row = db.query_one("SELECT * FROM agent_decisions WHERE agent_name = ?", (MODEL_GOVERNANCE_AGENT_NAME,))
+    row = db.query_one("SELECT * FROM decision_log WHERE source = ?", (MODEL_GOVERNANCE_NAME,))
     assert row["decision"] == "promoted"
 
 
@@ -73,7 +73,7 @@ def test_retains_incumbent_when_candidate_does_not_beat_it(tmp_path: Path) -> No
     assert result["active_model"] == "old_model"
     registry = db.query_one("SELECT * FROM model_registry WHERE model_name = 'old_model'")
     assert registry["active"] == 1
-    row = db.query_one("SELECT * FROM agent_decisions WHERE agent_name = ?", (MODEL_GOVERNANCE_AGENT_NAME,))
+    row = db.query_one("SELECT * FROM decision_log WHERE source = ?", (MODEL_GOVERNANCE_NAME,))
     assert row["decision"] == "retained_incumbent"
 
 

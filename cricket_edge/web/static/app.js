@@ -13,18 +13,18 @@ const ACTION_BUTTON_IDS = [
 ];
 
 const PIPELINE_STAGES = [
-  { key: "data_steward", label: "Chief Data Officer", role: "Checks fixtures, odds, and predictions exist before anything else runs." },
-  { key: "bet_decision_agent", label: "Trading Desk", role: "Reads predictions, applies hard risk rules, optionally asks a local LLM to explain, then proposes paper bets." },
-  { key: "portfolio_oversight_agent", label: "Chief Risk Officer", role: "Reviews every proposed bet, and vetoes it if data health is flagged or a portfolio-level stake cap is exceeded." },
-  { key: "market_watch_agent", label: "Trading Desk — Position Monitoring", role: "Watches open paper bets and simulates cash-out when odds move far enough." },
-  { key: "report_writer_agent", label: "Chief Operating Officer", role: "Writes the daily briefing from account state and top model edges." },
-  { key: "model_governance_agent", label: "Head of Quant Research", role: "Retrains candidate models on a schedule and only promotes one that actually beats the incumbent." },
+  { key: "data_health_check", label: "Data Health", role: "Checks fixtures, odds, and predictions exist before anything else runs." },
+  { key: "bet_evaluator", label: "Bet Evaluation", role: "Reads predictions, applies hard risk rules, then proposes paper bets." },
+  { key: "risk_gate", label: "Risk Gate", role: "Reviews every proposed bet, and vetoes it if data health is flagged or a portfolio-level stake cap is exceeded." },
+  { key: "position_monitor", label: "Position Monitoring", role: "Watches open paper bets and simulates cash-out when odds move far enough." },
+  { key: "briefing_writer", label: "Daily Briefing", role: "Writes the daily briefing from account state and top model edges." },
+  { key: "model_governance", label: "Model Governance", role: "Retrains candidate models on a schedule and only promotes one that actually beats the incumbent." },
 ];
 
 const PAGE_TITLES = {
   overview: "Cricket model decisions, paper execution, and live monitoring",
   models: "Statistical models: training, calibration, and validation",
-  bets: "Agent-placed paper bets and track record",
+  bets: "Paper bets placed by the decision pipeline, and track record",
   data: "Live data feeds, ingestion, and the system event log",
 };
 
@@ -95,8 +95,8 @@ function render() {
   document.getElementById("lastUpdated").textContent = `Updated ${new Date().toLocaleTimeString()}`;
 
   renderMetrics(data.account);
-  renderAutonomousBanner(data.autonomous || {});
-  renderAgentPipeline(data.decisions);
+  renderSchedulerBanner(data.scheduler || {});
+  renderDecisionPipeline(data.decisions);
   renderBriefing(data.decisions);
   renderReadiness(data.readiness || {});
 
@@ -147,32 +147,32 @@ function renderMetrics(account) {
   `).join("");
 }
 
-function renderAutonomousBanner(autonomous) {
-  const dot = document.getElementById("autonomousDot");
-  const text = document.getElementById("autonomousText");
-  if (!autonomous.enabled) {
+function renderSchedulerBanner(scheduler) {
+  const dot = document.getElementById("schedulerDot");
+  const text = document.getElementById("schedulerText");
+  if (!scheduler.enabled) {
     dot.className = "dot bad";
-    text.textContent = "Autonomous mode: disabled";
+    text.textContent = "Scheduler: disabled";
     return;
   }
-  if (!autonomous.alive) {
+  if (!scheduler.alive) {
     dot.className = "dot warn";
-    text.textContent = "Autonomous mode: starting…";
+    text.textContent = "Scheduler: starting…";
     return;
   }
   dot.className = "dot";
-  const lastTick = autonomous.last_tick_at ? new Date(autonomous.last_tick_at).toLocaleTimeString() : "-";
-  const lastRetrain = autonomous.last_retrain_at ? new Date(autonomous.last_retrain_at).toLocaleTimeString() : "never yet";
-  text.textContent = `Autonomous mode: running (last tick ${lastTick}, last retrain ${lastRetrain})`;
+  const lastTick = scheduler.last_tick_at ? new Date(scheduler.last_tick_at).toLocaleTimeString() : "-";
+  const lastRetrain = scheduler.last_retrain_at ? new Date(scheduler.last_retrain_at).toLocaleTimeString() : "never yet";
+  text.textContent = `Scheduler: running (last tick ${lastTick}, last retrain ${lastRetrain})`;
 }
 
-function renderAgentPipeline(decisions) {
-  const latestByAgent = {};
+function renderDecisionPipeline(decisions) {
+  const latestBySource = {};
   for (const decision of decisions) {
-    if (!latestByAgent[decision.agent_name]) latestByAgent[decision.agent_name] = decision;
+    if (!latestBySource[decision.source]) latestBySource[decision.source] = decision;
   }
   const cards = PIPELINE_STAGES.map((stage, index) => {
-    const last = latestByAgent[stage.key];
+    const last = latestBySource[stage.key];
     const status = last
       ? `<div class="pipeline-status"><span class="badge ${badgeForDecision(last.decision)}">${escapeHtml(last.decision)}</span> ${escapeHtml(last.generated_at || "")}</div>
          <div class="pipeline-reason muted">${escapeHtml(last.reason || "")}</div>`
@@ -194,7 +194,7 @@ function renderAgentPipeline(decisions) {
       <div class="pipeline-role muted">Executes, monitors, and settles simulated bets. No real-money connector exists.</div>
     </div>
   `;
-  document.getElementById("agentPipeline").innerHTML = cards + brokerArrow + broker;
+  document.getElementById("decisionPipeline").innerHTML = cards + brokerArrow + broker;
 }
 
 function badgeForDecision(decision) {
@@ -205,7 +205,7 @@ function badgeForDecision(decision) {
 }
 
 function renderBriefing(decisions) {
-  const briefing = decisions.find((d) => d.agent_name === "report_writer_agent");
+  const briefing = decisions.find((d) => d.source === "briefing_writer");
   let lines = [];
   if (briefing) {
     try {
@@ -392,7 +392,7 @@ function renderBetsStats(bets, clv) {
 
 function renderBets(bets) {
   if (!bets.length) {
-    document.getElementById("betsTable").innerHTML = `<div class="loading">No paper bets yet. Run Morning to let the decision agent review model edges.</div>`;
+    document.getElementById("betsTable").innerHTML = `<div class="loading">No paper bets yet. Run Morning to let the decision pipeline review model edges.</div>`;
     return;
   }
   const rows = bets.map((bet) => {
@@ -420,13 +420,13 @@ function renderDecisions(decisions) {
     const match = decision.team_a ? `${decision.team_a} vs ${decision.team_b}` : "System";
     return `
       <article class="decision">
-        <strong>${escapeHtml(decision.agent_name)} - ${escapeHtml(decision.decision)}</strong>
+        <strong>${escapeHtml(decision.source)} - ${escapeHtml(decision.decision)}</strong>
         <div class="muted">${escapeHtml(match)} - ${escapeHtml(decision.generated_at)}</div>
         <div>${escapeHtml(decision.reason)}</div>
       </article>
     `;
   }).join("");
-  document.getElementById("decisionsList").innerHTML = items || `<div class="loading">No agent decisions yet.</div>`;
+  document.getElementById("decisionsList").innerHTML = items || `<div class="loading">No decisions yet.</div>`;
 }
 
 function renderClv(evaluations) {

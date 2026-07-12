@@ -75,16 +75,15 @@ The standard is not "the model looks good." The standard is that the whole syste
 - CLV is reviewed weekly.
 - ROI is never trusted without CLV context.
 
-## Agent Safety
+## Decision Pipeline Safety
 
-- Agents consume structured data only.
-- Agents do not invent probabilities.
-- Agents cannot bypass hard risk rules.
-- Agent prompts are versioned.
-- Agent outputs are stored as JSON where possible.
-- Backtest Critic Agent reviews model changes.
-- Risk Agent reviews exposure before execution.
-- Market Watch Agent flags stale/moving prices.
+- Each pipeline step consumes structured data only.
+- Pipeline steps do not invent probabilities.
+- Pipeline steps cannot bypass hard risk rules.
+- Pipeline outputs are stored as JSON where possible.
+- Automated backtest critique checks review model changes.
+- Correlated-exposure risk checks review exposure before execution.
+- Position monitoring flags stale/moving prices.
 
 ## Operations
 

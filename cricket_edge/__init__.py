@@ -1,4 +1,4 @@
-"""Cricket Edge autonomous paper-betting dashboard."""
+"""Cricket Edge paper-betting research dashboard."""
 
 __all__ = ["__version__"]
 

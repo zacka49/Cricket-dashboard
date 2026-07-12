@@ -7,7 +7,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
 
-from .autonomous_engine import start_background_engine
+from .scheduler import start_scheduler
 from .config import SETTINGS
 from .orchestrator import CricketEdgeOrchestrator
 
@@ -113,7 +113,7 @@ def main() -> None:
     parser.add_argument("--host", default=SETTINGS.host)
     parser.add_argument("--port", type=int, default=SETTINGS.port)
     args = parser.parse_args()
-    start_background_engine()
+    start_scheduler()
     run(args.host, args.port)
 
 

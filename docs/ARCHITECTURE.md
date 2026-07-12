@@ -6,50 +6,50 @@
 fixtures / odds / weather
   -> feature builder
   -> prediction engine
+  -> decision pipeline
   -> hard risk policy
-  -> LLM-compatible decision agents
   -> paper broker
   -> market monitor
   -> settlement and reporting
 ```
 
-## Why LLMs Are Not The Prediction Model
+## Why Predictions Are Rule-Based
 
-LLMs are useful for interpretation, workflow monitoring, and research management. They are not reliable enough to be the probability engine.
+Cricket Edge keeps probability estimation deterministic and auditable. Prediction models output probabilities, fair odds, edge, and uncertainty; pipeline steps consume that structured output, apply risk rules, and write reviewable decisions.
 
-In this system:
+Hard risk policy controls paper execution. Missing, stale, malformed, or demo odds block betting decisions rather than being patched over with narrative reasoning.
 
-- prediction models output probabilities and fair odds
-- agents read structured model output
-- agents explain, rank, and challenge decisions
-- hard risk rules control execution
+## Decision Pipeline Steps
 
-## Agent Responsibilities
-
-`DataStewardAgent`
+`DataHealthCheck`
 
 - checks whether fixtures, odds, and predictions exist
 - writes data-health decisions to the audit log
 
-`BetDecisionAgent`
+`BetEvaluator`
 
 - reads prediction rows
 - applies hard risk rules
-- optionally asks a local LLM for a concise reason
-- places paper bets through the paper broker
+- places paper bets through the paper broker when rules allow
+- records deterministic bet/skip reasons
 
-`MarketWatchAgent`
+`RiskGate`
+
+- checks bankroll, exposure, confidence, and edge limits
+- blocks paper execution when any required control fails
+
+`PositionMonitor`
 
 - reads open paper bets
 - compares entry odds with latest odds
 - simulates cash-out when odds move far enough
 
-`ReportWriterAgent`
+`BriefingWriter`
 
 - produces a daily briefing from account state and top model edges
 
 ## Broker Boundary
 
-`PaperBroker` is intentionally separate from agents and prediction code. A future real-money connector should implement the same style of interface but live in a different module with explicit safety gates.
+`PaperBroker` is intentionally separate from the decision pipeline and prediction code. A future real-money connector should implement the same style of interface but live in a different module with explicit safety gates.
 
 No real-money connector exists in this repository.

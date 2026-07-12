@@ -1,0 +1,55 @@
+The practical answer: don’t try to make the two CLIs “chat” directly at first. Make them coordinate through a shared project protocol: files + git + a task queue. That is reliable, inspectable, and much less weird than trying to pipe one terminal into another.
+Best setup:
+Create a shared coordination folder:
+.agents/
+  TASKS.md
+  DECISIONS.md
+  HANDOFFS.md
+  inbox/
+    claude.md
+    codex.md
+Add instructions for both agents:AGENTS.md for Codex
+CLAUDE.md for Claude
+
+Put the same protocol in both:
+# Agent Collaboration Protocol
+
+Before starting work:
+- Read .agents/TASKS.md, .agents/DECISIONS.md, and .agents/HANDOFFS.md.
+- Claim one task by adding your name, timestamp, and status.
+- Do not edit files another agent has claimed unless explicitly handed off.
+
+When delegating:
+- Add a section to .agents/HANDOFFS.md with:
+  - From:
+  - To:
+  - Task:
+  - Context:
+  - Files involved:
+  - Desired output:
+  - Verification needed:
+
+When finishing:
+- Update .agents/TASKS.md.
+- Write a short handoff note.
+- Commit or clearly list changed files.
+Use git branches to avoid collisions:
+git checkout -b claude/plan
+git checkout -b codex/implementation-task-name
+Claude can own planning, architecture critique, broad reasoning, docs, product framing. Codex can own repo-aware implementation, tests, refactors, debugging, verification, and app/tool integration. That division is not absolute, but it is a good starting default.
+Give Claude this next prompt:
+Please write your plan into .agents/TASKS.md as a task queue for Codex and Claude.
+
+For each task include:
+- owner recommendation: Claude, Codex, or either
+- goal
+- files likely involved
+- dependencies
+- acceptance criteria
+- suggested verification command
+
+Also write any architectural decisions to .agents/DECISIONS.md.
+Then start Codex and say:
+Read .agents/TASKS.md, .agents/DECISIONS.md, and .agents/HANDOFFS.md. Claim the highest-priority task suitable for Codex, implement it, verify it, and update the agent files with your handoff.
+The more advanced version is a local MCP “agent bus” that both CLIs connect to, exposing tools like list_tasks, claim_task, post_message, and handoff_task. But I’d start with the file-based protocol first. It is simple, debuggable, and works even when one agent crashes or forgets what happened.
+I can set up the .agents/, AGENTS.md, and CLAUDE.md collaboration protocol in this repo for you.

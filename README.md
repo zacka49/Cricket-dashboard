@@ -1,13 +1,13 @@
 # Cricket Edge
 
-Cricket Edge is a local-first, autonomous cricket betting research desk. Once running, a background engine continuously monitors positions, settles bets against real results, and retrains/evaluates models on its own schedule — no manual button presses required. It runs in paper mode only: it can create simulated bets, monitor them, cash out in simulation, and settle them against real match outcomes as they become available.
+Cricket Edge is a local-first cricket betting research and paper-trading system. Once running, a background scheduler monitors positions, settles paper bets against real results, and retrains/evaluates models on its own schedule. It runs in paper mode only: it can create simulated bets, monitor them, cash out in simulation, and settle them against real match outcomes as they become available.
 
-The important design choice is separation of duties, styled after how a small trading firm is organized:
+The important design choice is separation between prediction, risk control, and execution:
 
-- statistical models (Quant Research) estimate probability, fair odds, edge, and uncertainty
-- hard risk rules and a Chief Risk Officer agent decide whether execution is allowed, with veto power over the Trading Desk
-- a Head of Quant Research agent retrains candidate models on a schedule and only promotes one that actually beats the incumbent
-- local LLM agents interpret model output, explain decisions, and monitor workflow quality
+- statistical models estimate probability, fair odds, edge, and uncertainty
+- deterministic pipeline steps check data health, evaluate bets, apply risk rules, monitor positions, and write daily briefings
+- hard risk rules decide whether paper execution is allowed
+- a model-promotion gate retrains candidate models on a schedule and only promotes one that beats the incumbent
 - the broker is paper-only until the models prove calibration and closing-line value
 
 ## Current MVP
@@ -20,11 +20,11 @@ This first build is dependency-light and works offline with the Python standard 
 - transparent baseline T20 prediction model
 - paper bankroll
 - paper bet placement
-- an autonomous background engine that runs the daily cycle, continuous monitoring/settlement, and scheduled model retraining without manual intervention
+- a background scheduler that runs the daily cycle, continuous monitoring/settlement, and scheduled model retraining without manual intervention
 - a real model-promotion gate: a retrained model only goes live if it actually beats the incumbent on held-out data
 - simulated market monitoring
 - simulated cash-out rules
-- agent decisions and daily briefing
+- decision log and daily briefing
 - event log and audit trail
 - compact dashboard action responses so long workflows reload state cleanly
 - stubs/free-source adapters for Cricsheet and Open-Meteo
@@ -32,8 +32,8 @@ This first build is dependency-light and works offline with the Python standard 
 - The Odds API cricket odds fallback when `THE_ODDS_API_KEY` is configured
 - real-odds betting gate: demo/stale odds are prediction context only and cannot trigger paper bets
 - historical strategy backtest reporting from stored market baselines
-- portfolio readiness checklist for model, odds, CLV, autonomy, and paper-safety gaps
-- a 4-page dashboard (Trading Floor / Quant Research / Positions / Ops & Compliance) with an agent-pipeline diagram and interactive Plotly charts (model comparison, calibration reliability, feature importance, equity curve, backtest P&L)
+- portfolio readiness checklist for model, odds, CLV, scheduling, and paper-safety gaps
+- a 4-page dashboard (Trading Floor / Quant Research / Positions / Ops & Compliance) with a decision-pipeline diagram and interactive Plotly charts (model comparison, calibration reliability, feature importance, equity curve, backtest P&L)
 
 ## Run It
 
@@ -61,7 +61,7 @@ Then open:
 http://127.0.0.1:8765
 ```
 
-The dashboard is a 4-page app: **Trading Floor** (project summary, agent pipeline diagram, daily briefing, readiness checklist, autonomous-mode status), **Quant Research** (training data, model comparison/calibration/feature-importance charts, registry, historical backtest), **Positions** (live fixtures/predictions, equity curve, bet history, CLV), and **Ops & Compliance** (odds feed health, event log). Starting the server also starts the autonomous engine in the background (see "Autonomous Operation" below) — the manual buttons on every page stay available as overrides, but nothing requires them.
+The dashboard is a 4-page app: **Trading Floor** (project summary, decision pipeline diagram, daily briefing, readiness checklist, scheduler status), **Quant Research** (training data, model comparison/calibration/feature-importance charts, registry, historical backtest), **Positions** (live fixtures/predictions, equity curve, bet history, CLV), and **Ops & Compliance** (odds feed health, event log). Starting the server also starts the background scheduler (see "Background Scheduler" below). The manual buttons on every page stay available as overrides, but nothing requires them.
 
 ### One-time setup: vendor Plotly locally
 
@@ -108,7 +108,7 @@ To train calibrated pre-toss/post-toss models and a lightweight gradient-boostin
 & "$env:LOCALAPPDATA\Programs\Python\Python313\python.exe" .\scripts\train_and_govern_models.py
 ```
 
-A candidate only gets promoted if its held-out test Brier score beats the current active model's — otherwise the incumbent stays active. Either verdict is logged to the agent decision trail as `model_governance_agent`. The results appear in the dashboard under `Model Registry and Calibration`.
+A candidate only gets promoted if its held-out test Brier score beats the current active model's. Otherwise the incumbent stays active. Either verdict is logged to the decision trail as `model_governance`. The results appear in the dashboard under `Model Registry and Calibration`.
 
 ## Trading Desk: Market Data & CLV Layer
 
@@ -126,16 +126,16 @@ Optional manual odds import:
 
 This also attempts a strategy backtest for the active/latest model when historical market baselines are available. The backtest uses only odds timestamps on or before the simulated match date.
 
-## Autonomous Operation
+## Background Scheduler
 
-Starting the app (`run.py`, `python -m cricket_edge`, or `run_windows.ps1`) also starts `AutonomousEngine` on a background thread — no separate process or script to launch. On a configurable tick (`CRICKET_EDGE_AUTONOMOUS_TICK_SECONDS`, default 300s), it:
+Starting the app (`run.py`, `python -m cricket_edge`, or `run_windows.ps1`) also starts `BackgroundScheduler` on a background thread. There is no separate process or script to launch. On a configurable tick (`CRICKET_EDGE_SCHEDULER_TICK_SECONDS`, default 300s), it:
 
 - always runs a monitor tick and settlement pass (both cheap/idempotent when nothing's due)
 - runs the full morning cycle once per calendar day
-- retrains and re-evaluates models whenever `CRICKET_EDGE_AUTONOMOUS_RETRAIN_INTERVAL_HOURS` (default 24) have passed, or `CRICKET_EDGE_AUTONOMOUS_RETRAIN_NEW_MATCH_THRESHOLD` (default 20) new Cricsheet matches have landed since the last retrain — whichever comes first
+- retrains and re-evaluates models whenever `CRICKET_EDGE_SCHEDULER_RETRAIN_INTERVAL_HOURS` (default 24) have passed, or `CRICKET_EDGE_SCHEDULER_RETRAIN_NEW_MATCH_THRESHOLD` (default 20) new Cricsheet matches have landed since the last retrain, whichever comes first
 - catches and logs any single tick's failure rather than letting it kill the loop
 
-Set `CRICKET_EDGE_AUTONOMOUS_ENABLED=false` to disable it (e.g. for manual-only operation). The Trading Floor page shows a live "Autonomous mode" banner (running/starting/disabled, last tick, last retrain) sourced from `/api/state`'s `autonomous` key.
+Set `CRICKET_EDGE_SCHEDULER_ENABLED=false` to disable it (for manual-only operation). The Trading Floor page shows a live scheduler banner (running/starting/disabled, last tick, last retrain) sourced from `/api/state`'s `scheduler` key.
 
 ## Live Odds Feed
 
@@ -176,7 +176,7 @@ Each variable in `.env` must be on its own line (`KEY=value`, one per line). A s
 
 ## Pull All Live Data
 
-To fetch everything free this project currently supports in one go — live cricket odds (Bet365 via odds-api.io, falling back to The Odds API) and a freshness-checked Cricsheet historical archive — and persist all of it (raw JSON snapshots under `data/raw/`, plus structured rows in `market_odds_snapshots`/`odds_snapshots` for later backtesting or CLV analysis):
+To fetch everything free this project currently supports in one go - live cricket odds (Bet365 via odds-api.io, falling back to The Odds API) and a freshness-checked Cricsheet historical archive - and persist all of it (raw JSON snapshots under `data/raw/`, plus structured rows in `market_odds_snapshots`/`odds_snapshots` for later backtesting or CLV analysis):
 
 ```powershell
 & "$env:LOCALAPPDATA\Programs\Python\Python313\python.exe" .\scripts\pull_live_data.py
@@ -188,17 +188,17 @@ Or click `Pull All Live Data` in the dashboard. This does not touch weather: Ope
 
 Global workflow actions live in the sidebar on every page:
 
-- `Run Morning`: seeds/refreshes data, runs predictions, lets agents review candidates, and places paper bets if rules allow.
-- `Monitor Tick`: simulates a live odds refresh, reruns predictions, and lets the Market Watch Agent hold or cash out paper bets.
+- `Run Morning`: seeds/refreshes data, runs predictions, evaluates candidates through the decision pipeline, and places paper bets if rules allow.
+- `Monitor Tick`: refreshes market context, reruns predictions, and lets the position monitor hold or cash out paper bets.
 - `Fetch Live Odds`: imports current cricket match-winner prices into the prediction and market layers, using The Odds API as a fallback when the primary Bet365 feed is stale or empty.
 - `Pull All Live Data`: runs `Fetch Live Odds` plus a freshness-checked Cricsheet historical archive refresh in one action.
 - `Settle Paper`: settles a paper bet only once its fixture is linked to a real, confirmed Cricsheet result; bets on fixtures Cricsheet hasn't caught up with yet stay `open` rather than being given a guessed outcome. See Known Limitations.
-- `Reset Demo`: clears fixtures, predictions, paper bets, agent decisions, and logs, then rebuilds demo data.
+- `Reset Demo`: clears fixtures, predictions, paper bets, decision logs, and events, then rebuilds demo data.
 
 Model-retraining actions live contextually at the top of the **Quant Research** page:
 
 - `Train Elo`, `Train Logistic`: retrain the corresponding models.
-- `Force Retrain Now`: manually triggers the same governed training/promotion cycle the autonomous engine runs on its own schedule.
+- `Force Retrain Now`: manually triggers the same governed training/promotion cycle the background scheduler runs on its own schedule.
 - `Rebuild Market Data`: normalizes odds snapshots, updates market baselines, updates paper CLV, and runs the latest available strategy backtest.
 
 ## Project Layout
@@ -208,42 +208,30 @@ cricket-edge/
   run.py                # root-level launcher (VS Code Run/F5, or `python run.py`)
   cricket_edge/
     advanced_models.py  # calibrated/gradient-boosting model training + promotion gate
-    agents.py          # LLM-compatible decision agents
-    autonomous_engine.py # background daemon: daily cycle, monitoring, scheduled retraining
-    backtesting.py     # timestamp-safe paper strategy backtests
+    pipeline.py         # deterministic decision pipeline steps
+    scheduler.py        # background scheduler: daily cycle, monitoring, scheduled retraining
+    backtesting.py      # timestamp-safe paper strategy backtests
     charts.py           # Plotly figure builders for the dashboard
-    config.py          # environment/runtime settings
-    data_sources.py    # free-source adapters
-    database.py        # SQLite schema and helpers
-    features.py        # transparent demo features
+    config.py           # environment/runtime settings
+    data_sources.py     # free-source adapters
+    database.py         # SQLite schema and helpers
+    features.py         # transparent demo features
     live_data.py        # single entry point to pull every free live/historical source
-    live_model.py        # wires the trained model into live (non-demo) predictions
-    llm.py             # Ollama HTTP client
-    orchestrator.py    # morning run / monitor / settle workflows
-    paper_broker.py    # paper-only execution and cash-out simulation
-    prediction.py      # prediction engine (demo placeholder + trained-model paths)
-    readiness.py       # portfolio and safety checklist reporting
-    seed.py            # demo fixtures, weather, and odds
-    server.py          # local web server + autonomous engine startup
+    live_model.py       # wires the trained model into live (non-demo) predictions
+    orchestrator.py     # morning run / monitor / settle workflows
+    paper_broker.py     # paper-only execution and cash-out simulation
+    prediction.py       # prediction engine (demo placeholder + trained-model paths)
+    readiness.py        # portfolio and safety checklist reporting
+    seed.py             # demo fixtures, weather, and odds
+    server.py           # local web server + scheduler startup
     web/
       templates/        # index.html (4-page dashboard shell)
-      static/            # app.js, styles.css, plotly.min.js (vendored, not checked in)
+      static/           # app.js, styles.css, plotly.min.js (vendored, not checked in)
   data/
   docs/
   scripts/              # includes vendor_plotlyjs.py, pull_live_data.py, build_data_and_elo.py
   tests/
 ```
-
-## Local LLMs
-
-The app can call a local Ollama-compatible endpoint if it is running:
-
-```powershell
-$env:OLLAMA_BASE_URL = "http://127.0.0.1:11434"
-$env:OLLAMA_MODEL = "gemma4-daytrader:latest"
-```
-
-If Ollama is not running, the agents use deterministic fallback reasoning. This keeps the app usable while still being ready for your local Gemma/Qwen/Phi models later.
 
 ## Free Data Plan
 
@@ -261,7 +249,7 @@ Historical betting odds are the main free-data weakness. The system should begin
 This project favors admitting a gap over faking data to fill it. Current known gaps:
 
 - **No weather-to-fixture mapping.** Neither odds provider returns a real match venue, so live fixtures can't be reliably mapped to a location for Open-Meteo. See `Pull All Live Data` above.
-- **Real settlement and the historical backtest both lag behind real matches.** A paper bet only settles once Cricsheet's archive actually contains that match's result (matched by team names and date); until then it stays `open` rather than being settled with a guessed outcome. Likewise, the historical strategy backtest only has as many rows as fixtures with both a captured real odds snapshot and a resolved Cricsheet result. Cricsheet ingestion (`scripts/build_data_and_elo.py`) is a manual step, not run automatically by `Pull All Live Data` or the autonomous engine, so both can take real time to catch up — that's expected, not a bug.
+- **Real settlement and the historical backtest both lag behind real matches.** A paper bet only settles once Cricsheet's archive actually contains that match's result (matched by team names and date); until then it stays `open` rather than being settled with a guessed outcome. Likewise, the historical strategy backtest only has as many rows as fixtures with both a captured real odds snapshot and a resolved Cricsheet result. Cricsheet ingestion (`scripts/build_data_and_elo.py`) is a manual step, not run automatically by `Pull All Live Data` or the background scheduler, so both can take real time to catch up. That's expected, not a bug.
 - **`market_implied_historical_v1` is a real (if currently sparse) benchmark; `SYNTHETIC_MARKET_MODEL` is not.** `market.py::build_synthetic_market_baseline` generates an Elo-plus-noise benchmark purely to exercise the model-comparison charts. It's explicitly tagged `not_real_market_odds: True` in its stored predictions and should never be read as a real edge.
 
 ## Real-Money Safety

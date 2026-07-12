@@ -8,6 +8,9 @@ from .config import PROJECT_ROOT, SETTINGS
 from .database import Database, utc_now
 
 
+MIN_TRUSTED_BACKTEST_BETS = 30
+
+
 def portfolio_readiness_report(db: Database) -> dict[str, Any]:
     items = [
         _item(
@@ -41,6 +44,24 @@ def portfolio_readiness_report(db: Database) -> dict[str, Any]:
             "Risk decisions explicitly block missing or stale Bet365 odds.",
         ),
         _item(
+            "model_training_data",
+            "Model training data",
+            "pass" if _count(db, "cricsheet_matches") > 0 and _count(db, "team_elo_history") > 0 else "gap",
+            "Cricsheet matches and chronological Elo rows must exist before supervised evaluation can be reproduced.",
+        ),
+        _item(
+            "model_runs",
+            "Model evaluation runs",
+            "pass" if _count(db, "model_runs") > 0 else "gap",
+            "At least one model run should be stored with Brier score, log loss, accuracy, and payload metrics.",
+        ),
+        _item(
+            "model_predictions",
+            "Historical model predictions",
+            "pass" if _count(db, "model_predictions") > 0 else "gap",
+            "Historical predictions are needed for calibration review and strategy backtests.",
+        ),
+        _item(
             "active_model",
             "Active model registry",
             "pass" if _count_where(db, "model_registry", "active = 1") > 0 else "gap",
@@ -53,22 +74,28 @@ def portfolio_readiness_report(db: Database) -> dict[str, Any]:
             "Run the market data build/backtest after historical market odds exist.",
         ),
         _item(
+            "backtest_sample_size",
+            "Backtest sample size",
+            _backtest_sample_status(db),
+            f"A research-grade read needs at least {MIN_TRUSTED_BACKTEST_BETS} bets from timestamp-valid real market baselines.",
+        ),
+        _item(
             "clv_tracking",
             "Paper CLV tracking",
             "pass" if _count(db, "paper_bet_evaluations") > 0 else "gap",
             "Paper bet evaluations compare entry odds against the latest closing proxy.",
         ),
         _item(
-            "agent_audit_log",
-            "Agent audit trail",
-            "pass" if _count(db, "agent_decisions") > 0 else "gap",
-            "Agent decisions are persisted with reasons and payloads.",
+            "decision_log",
+            "Decision audit trail",
+            "pass" if _count(db, "decision_log") > 0 else "gap",
+            "Pipeline decisions are persisted with reasons and payloads.",
         ),
         _item(
-            "autonomous_engine",
-            "Autonomous engine heartbeat",
-            "pass" if _autonomous_engine_alive(db) else "gap",
-            "Background engine ticks monitor/settle continuously and retrains on a schedule, without manual button presses.",
+            "scheduler_heartbeat",
+            "Background scheduler heartbeat",
+            "pass" if _scheduler_alive(db) else "gap",
+            "Background scheduler ticks monitor/settle continuously and retrains on a schedule, without manual button presses.",
         ),
         _item(
             "tests",
@@ -109,7 +136,7 @@ def _latest_skip_reason_mentions(db: Database, needle: str) -> bool:
     row = db.query_one(
         """
         SELECT reason
-        FROM agent_decisions
+        FROM decision_log
         WHERE decision = 'skip'
         ORDER BY generated_at DESC, id DESC
         LIMIT 20
@@ -118,12 +145,26 @@ def _latest_skip_reason_mentions(db: Database, needle: str) -> bool:
     return bool(row and needle.lower() in str(row["reason"]).lower())
 
 
-def _autonomous_engine_alive(db: Database) -> bool:
-    row = db.query_one("SELECT last_tick_at FROM autonomous_state WHERE id = 1")
+def _backtest_sample_status(db: Database) -> str:
+    row = db.query_one(
+        """
+        SELECT bets
+        FROM backtest_runs
+        ORDER BY generated_at DESC, id DESC
+        LIMIT 1
+        """
+    )
+    if not row:
+        return "gap"
+    return "pass" if int(row["bets"] or 0) >= MIN_TRUSTED_BACKTEST_BETS else "watch"
+
+
+def _scheduler_alive(db: Database) -> bool:
+    row = db.query_one("SELECT last_tick_at FROM scheduler_state WHERE id = 1")
     if not row or not row["last_tick_at"]:
         return False
     last_tick = datetime.fromisoformat(str(row["last_tick_at"]).replace("Z", "+00:00"))
-    return (datetime.now(timezone.utc) - last_tick).total_seconds() <= 2 * SETTINGS.autonomous_tick_seconds
+    return (datetime.now(timezone.utc) - last_tick).total_seconds() <= 2 * SETTINGS.scheduler_tick_seconds
 
 
 def _tests_exist() -> bool:

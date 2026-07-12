@@ -13,7 +13,7 @@
           <div class="brand-mark">CE</div>
           <div>
             <h1>Cricket Edge</h1>
-            <p>Autonomous paper betting research</p>
+            <p>Cricket betting research &amp; paper trading</p>
           </div>
         </div>
 
@@ -22,9 +22,9 @@
           Paper mode only
         </div>
 
-        <div class="mode-banner" id="autonomousBanner">
-          <span class="dot" id="autonomousDot"></span>
-          <span id="autonomousText">Autonomous mode: checking&hellip;</span>
+        <div class="mode-banner" id="schedulerBanner">
+          <span class="dot" id="schedulerDot"></span>
+          <span id="schedulerText">Scheduler: checking&hellip;</span>
         </div>
 
         <nav class="nav-list" id="pageNav">
@@ -70,23 +70,22 @@
               </div>
             </div>
             <p class="about-copy">
-              A local-first cricket betting research system that separates three layers by design: statistical
-              models estimate probability, fair odds, and edge; hard risk rules decide whether execution is
-              allowed; and a local LLM only explains decisions after the fact &mdash; it never sets the probability
-              or the stake. The broker is paper-only until the models prove calibration and closing-line value
-              over a meaningful sample.
+              A local-first cricket betting research system that separates two layers by design: statistical
+              models estimate probability, fair odds, and edge; hard risk rules then decide whether execution is
+              allowed and at what stake. The broker is paper-only until the models prove calibration and
+              closing-line value over a meaningful sample.
             </p>
           </div>
 
           <div class="panel">
             <div class="panel-header">
               <div>
-                <p class="eyebrow">Agentic workflow</p>
-                <h3>Agent Pipeline</h3>
+                <p class="eyebrow">Decision workflow</p>
+                <h3>Decision Pipeline</h3>
               </div>
               <span class="pill">Morning run &amp; monitor tick</span>
             </div>
-            <div id="agentPipeline" class="pipeline"></div>
+            <div id="decisionPipeline" class="pipeline"></div>
           </div>
 
           <div class="layout-grid">
@@ -94,7 +93,7 @@
               <div class="panel-header">
                 <div>
                   <p class="eyebrow">Daily briefing</p>
-                  <h3>Agent Notes</h3>
+                  <h3>Decision Notes</h3>
                 </div>
               </div>
               <div id="briefing" class="briefing"></div>
@@ -249,7 +248,7 @@
               <div class="panel-header">
                 <div>
                   <p class="eyebrow">Decision layer</p>
-                  <h3>Recent Agent Decisions</h3>
+                  <h3>Recent Decisions</h3>
                 </div>
               </div>
               <div id="decisionsList" class="decision-list"></div>

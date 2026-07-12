@@ -6,14 +6,12 @@ from typing import Any
 
 from .config import SETTINGS
 from .database import Database, utc_now
-from .llm import LocalLLMClient
 from .paper_broker import PaperBroker
 from .risk import evaluate_candidate
 
 
-class DataStewardAgent:
-    name = "data_steward"
-    role_title = "Chief Data Officer"
+class DataHealthCheck:
+    name = "data_health_check"
 
     def __init__(self, db: Database) -> None:
         self.db = db
@@ -52,8 +50,8 @@ class DataStewardAgent:
     ) -> int:
         return self.db.execute(
             """
-            INSERT INTO agent_decisions(
-                fixture_id, agent_name, generated_at, decision, stake, confidence, reason, payload_json
+            INSERT INTO decision_log(
+                fixture_id, source, generated_at, decision, stake, confidence, reason, payload_json
             )
             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             """,
@@ -61,20 +59,18 @@ class DataStewardAgent:
         )
 
 
-class BetDecisionAgent:
-    name = "bet_decision_agent"
-    role_title = "Trading Desk"
+class BetEvaluator:
+    name = "bet_evaluator"
 
-    def __init__(self, db: Database, llm: LocalLLMClient | None = None) -> None:
+    def __init__(self, db: Database) -> None:
         self.db = db
-        self.llm = llm or LocalLLMClient()
         self.broker = PaperBroker(db)
 
     def evaluate(self) -> list[dict[str, Any]]:
         """Proposes decisions for open predictions without placing any bets.
 
         Side-effect-free w.r.t. paper_bets: callers must route the result
-        through an oversight step (see PortfolioOversightAgent) and then
+        through an oversight step (see RiskGate) and then
         execute() before any bet actually gets placed.
         """
         predictions = self.db.query(
@@ -93,8 +89,7 @@ class BetDecisionAgent:
             if self.broker.fixture_market_has_open_bet(int(prediction["fixture_id"]), prediction["market"]):
                 continue
             risk = evaluate_candidate(prediction, float(account["bankroll"]), open_exposure)
-            llm_reason = self._llm_reason(prediction, risk)
-            reason = llm_reason or _fallback_reason(prediction, risk)
+            reason = _fallback_reason(prediction, risk)
             decision = {
                 "fixture_id": prediction["fixture_id"],
                 "decision": risk["decision"],
@@ -109,7 +104,7 @@ class BetDecisionAgent:
             if decision["decision"] == "paper_bet":
                 open_exposure += float(decision["stake"])
             decisions.append(decision)
-        self.db.log_event("agent", f"Bet Decision Agent evaluated {len(decisions)} candidates.")
+        self.db.log_event("pipeline", f"Bet evaluator evaluated {len(decisions)} candidates.")
         return decisions
 
     def execute(self, decisions: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -129,42 +124,21 @@ class BetDecisionAgent:
             decision["bet_id"] = bet_id
             if bet_id:
                 placed.append(decision)
-        self.db.log_event("agent", f"Bet Decision Agent placed {len(placed)} paper bets.")
+        self.db.log_event("pipeline", f"Bet evaluator placed {len(placed)} paper bets.")
         return placed
 
     def run(self) -> list[dict[str, Any]]:
         """Convenience wrapper: evaluate -> oversight review -> execute."""
         proposals = self.evaluate()
-        reviewed = PortfolioOversightAgent(self.db).review(proposals)
+        reviewed = RiskGate(self.db).review(proposals)
         self.execute(reviewed)
         return reviewed
-
-    def _llm_reason(self, prediction: dict[str, Any], risk: dict[str, Any]) -> str:
-        context = {
-            "match": f"{prediction['team_a']} vs {prediction['team_b']}",
-            "competition": prediction["competition"],
-            "venue": prediction["venue"],
-            "selection": prediction["selection"],
-            "model_probability": prediction["probability"],
-            "fair_odds": prediction["fair_odds"],
-            "market_odds": prediction["market_odds"],
-            "edge": prediction["edge"],
-            "confidence": prediction["confidence"],
-            "risk_decision": risk,
-        }
-        result = self.llm.generate_json(
-            "You are a conservative paper-betting analyst. Do not invent stats. Explain decisions from the JSON context only.",
-            json.dumps(context, sort_keys=True),
-        )
-        if not result.ok or not result.data:
-            return ""
-        return str(result.data.get("reason", "")).strip()[:500]
 
     def _record(self, prediction: dict[str, Any], decision: dict[str, Any]) -> int:
         return self.db.execute(
             """
-            INSERT INTO agent_decisions(
-                fixture_id, agent_name, generated_at, decision, stake, confidence, reason, payload_json
+            INSERT INTO decision_log(
+                fixture_id, source, generated_at, decision, stake, confidence, reason, payload_json
             )
             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             """,
@@ -181,20 +155,19 @@ class BetDecisionAgent:
         )
 
 
-class PortfolioOversightAgent:
-    """Sits between BetDecisionAgent.evaluate() and .execute(), able to veto
-    an individual proposed bet -- the coordination point where one agent's
+class RiskGate:
+    """Sits between BetEvaluator.evaluate() and .execute(), able to veto
+    an individual proposed bet -- the coordination point where one step's
     output can be overridden by another, with its own audit trail row."""
 
-    name = "portfolio_oversight_agent"
-    role_title = "Chief Risk Officer"
+    name = "risk_gate"
 
     def __init__(self, db: Database, portfolio_cap_fraction: float | None = None) -> None:
         self.db = db
         self.portfolio_cap_fraction = portfolio_cap_fraction
 
     def review(self, proposals: list[dict[str, Any]]) -> list[dict[str, Any]]:
-        needs_attention = self._data_steward_needs_attention()
+        needs_attention = self._data_health_needs_attention()
         cap_fraction = (
             self.portfolio_cap_fraction
             if self.portfolio_cap_fraction is not None
@@ -210,7 +183,7 @@ class PortfolioOversightAgent:
             if needs_attention:
                 self._veto(
                     proposal,
-                    "Data Steward flagged needs_attention; oversight blocks new paper bets this run.",
+                    "Data health check flagged needs_attention; risk gate blocks new paper bets this run.",
                 )
                 continue
             running_total += float(proposal["stake"])
@@ -223,23 +196,23 @@ class PortfolioOversightAgent:
             proposal["oversight"] = {"status": "approved"}
         return proposals
 
-    def _data_steward_needs_attention(self) -> bool:
+    def _data_health_needs_attention(self) -> bool:
         row = self.db.query_one(
             """
-            SELECT decision FROM agent_decisions
-            WHERE agent_name = ?
+            SELECT decision FROM decision_log
+            WHERE source = ?
             ORDER BY generated_at DESC, id DESC
             LIMIT 1
             """,
-            (DataStewardAgent.name,),
+            (DataHealthCheck.name,),
         )
         return bool(row and row["decision"] == "needs_attention")
 
     def _veto(self, proposal: dict[str, Any], reason: str) -> None:
         decision_id = self.db.execute(
             """
-            INSERT INTO agent_decisions(
-                fixture_id, agent_name, generated_at, decision, stake, confidence, reason, payload_json
+            INSERT INTO decision_log(
+                fixture_id, source, generated_at, decision, stake, confidence, reason, payload_json
             )
             VALUES (?, ?, ?, 'veto', 0, ?, ?, ?)
             """,
@@ -258,9 +231,8 @@ class PortfolioOversightAgent:
         proposal["oversight"] = {"status": "vetoed", "reason": reason, "oversight_decision_id": decision_id}
 
 
-class MarketWatchAgent:
-    name = "market_watch_agent"
-    role_title = "Trading Desk — Position Monitoring"
+class PositionMonitor:
+    name = "position_monitor"
 
     def __init__(self, db: Database) -> None:
         self.db = db
@@ -305,14 +277,14 @@ class MarketWatchAgent:
             payload = {"bet_id": bet["id"], "entry_odds": entry, "current_odds": current, "move": round(move, 4)}
             decision_id = self._record(int(bet["fixture_id"]), action, reason, payload)
             actions.append(payload | {"action": action, "reason": reason, "decision_id": decision_id})
-        self.db.log_event("agent", f"Market Watch Agent checked {len(open_bets)} open bets.")
+        self.db.log_event("pipeline", f"Position monitor checked {len(open_bets)} open bets.")
         return actions
 
     def _record(self, fixture_id: int, decision: str, reason: str, payload: dict[str, Any]) -> int:
         return self.db.execute(
             """
-            INSERT INTO agent_decisions(
-                fixture_id, agent_name, generated_at, decision, stake, confidence, reason, payload_json
+            INSERT INTO decision_log(
+                fixture_id, source, generated_at, decision, stake, confidence, reason, payload_json
             )
             VALUES (?, ?, ?, ?, 0, ?, ?, ?)
             """,
@@ -320,9 +292,8 @@ class MarketWatchAgent:
         )
 
 
-class ReportWriterAgent:
-    name = "report_writer_agent"
-    role_title = "Chief Operating Officer"
+class BriefingWriter:
+    name = "briefing_writer"
 
     def __init__(self, db: Database) -> None:
         self.db = db
@@ -352,8 +323,8 @@ class ReportWriterAgent:
         payload = {"briefing": lines, "generated_at": datetime.now(timezone.utc).isoformat()}
         self.db.execute(
             """
-            INSERT INTO agent_decisions(
-                fixture_id, agent_name, generated_at, decision, stake, confidence, reason, payload_json
+            INSERT INTO decision_log(
+                fixture_id, source, generated_at, decision, stake, confidence, reason, payload_json
             )
             VALUES (NULL, ?, ?, 'briefing', 0, 0.8, ?, ?)
             """,

@@ -3,12 +3,12 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Any
 
-from .agents import (
-    BetDecisionAgent,
-    DataStewardAgent,
-    MarketWatchAgent,
-    PortfolioOversightAgent,
-    ReportWriterAgent,
+from .pipeline import (
+    BetEvaluator,
+    BriefingWriter,
+    DataHealthCheck,
+    PositionMonitor,
+    RiskGate,
 )
 from .advanced_models import latest_week3_report, train_and_evaluate_models
 from .backtesting import latest_backtest_report, run_latest_strategy_backtest
@@ -35,13 +35,13 @@ class CricketEdgeOrchestrator:
         seed_demo_data(self.db)
         ensure_demo_odds(self.db)
         odds_refresh = self.fetch_bet365_odds()
-        data_status = DataStewardAgent(self.db).run()
+        data_status = DataHealthCheck(self.db).run()
         predictions = PredictionEngine(self.db).run_for_open_fixtures()
-        bet_agent = BetDecisionAgent(self.db)
-        proposals = bet_agent.evaluate()
-        reviewed = PortfolioOversightAgent(self.db).review(proposals)
-        placed = bet_agent.execute(reviewed)
-        briefing = ReportWriterAgent(self.db).daily_briefing()
+        bet_evaluator = BetEvaluator(self.db)
+        proposals = bet_evaluator.evaluate()
+        reviewed = RiskGate(self.db).review(proposals)
+        placed = bet_evaluator.execute(reviewed)
+        briefing = BriefingWriter(self.db).daily_briefing()
         return {
             "odds_refresh": odds_refresh,
             "data_status": data_status,
@@ -56,7 +56,7 @@ class CricketEdgeOrchestrator:
         odds_refresh = self.fetch_bet365_odds()
         simulate_market_move(self.db)
         predictions = PredictionEngine(self.db).run_for_open_fixtures()
-        actions = MarketWatchAgent(self.db).run()
+        actions = PositionMonitor(self.db).run()
         return {
             "odds_refresh": odds_refresh,
             "predictions": len(predictions),
@@ -94,7 +94,7 @@ class CricketEdgeOrchestrator:
 
     def reset_demo(self) -> dict[str, Any]:
         self.db.execute("DELETE FROM paper_bets")
-        self.db.execute("DELETE FROM agent_decisions")
+        self.db.execute("DELETE FROM decision_log")
         self.db.execute("DELETE FROM predictions")
         self.db.execute("DELETE FROM odds_snapshots")
         self.db.execute("DELETE FROM fixtures")
@@ -121,7 +121,7 @@ def build_state(db: Database) -> dict[str, Any]:
     decisions = db.query(
         """
         SELECT d.*, f.team_a, f.team_b
-        FROM agent_decisions d
+        FROM decision_log d
         LEFT JOIN fixtures f ON f.id = d.fixture_id
         ORDER BY d.generated_at DESC, d.id DESC
         LIMIT 40
@@ -191,16 +191,16 @@ def build_state(db: Database) -> dict[str, Any]:
         "week4": latest_week4_report(db),
         "backtesting": latest_backtest_report(db),
         "readiness": portfolio_readiness_report(db),
-        "autonomous": _autonomous_state(db),
+        "scheduler": _scheduler_state(db),
     }
     state["charts"] = build_all_charts(db, state)
     return state
 
 
-def _autonomous_state(db: Database) -> dict[str, Any]:
-    row = db.query_one("SELECT * FROM autonomous_state WHERE id = 1")
+def _scheduler_state(db: Database) -> dict[str, Any]:
+    row = db.query_one("SELECT * FROM scheduler_state WHERE id = 1")
     if not row or not row["last_tick_at"]:
-        return {"enabled": SETTINGS.autonomous_enabled, "alive": False}
+        return {"enabled": SETTINGS.scheduler_enabled, "alive": False}
     last_tick = datetime.fromisoformat(str(row["last_tick_at"]).replace("Z", "+00:00"))
-    alive = (datetime.now(timezone.utc) - last_tick).total_seconds() <= 2 * SETTINGS.autonomous_tick_seconds
-    return dict(row) | {"enabled": SETTINGS.autonomous_enabled, "alive": alive}
+    alive = (datetime.now(timezone.utc) - last_tick).total_seconds() <= 2 * SETTINGS.scheduler_tick_seconds
+    return dict(row) | {"enabled": SETTINGS.scheduler_enabled, "alive": alive}

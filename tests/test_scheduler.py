@@ -2,7 +2,7 @@ from pathlib import Path
 from typing import Any
 from unittest.mock import patch
 
-from cricket_edge.autonomous_engine import AutonomousEngine
+from cricket_edge.scheduler import BackgroundScheduler
 from cricket_edge.database import Database, utc_now
 
 
@@ -44,100 +44,100 @@ def _insert_cricsheet_match(db: Database, match_id: str) -> None:
     )
 
 
-def _make_engine(tmp_path: Path) -> tuple[AutonomousEngine, _FakeOrchestrator]:
+def _make_scheduler(tmp_path: Path) -> tuple[BackgroundScheduler, _FakeOrchestrator]:
     db = Database(tmp_path / "x.sqlite3")
     db.init_schema()
     fake = _FakeOrchestrator(db)
-    engine = AutonomousEngine(fake)
-    return engine, fake
+    scheduler = BackgroundScheduler(fake)
+    return scheduler, fake
 
 
 def test_tick_always_runs_monitor_and_settle(tmp_path: Path) -> None:
-    engine, fake = _make_engine(tmp_path)
+    scheduler, fake = _make_scheduler(tmp_path)
 
-    engine.tick()
+    scheduler.tick()
 
     assert "monitor_tick" in fake.calls
     assert "settle" in fake.calls
 
 
 def test_tick_runs_morning_run_only_once_per_calendar_day(tmp_path: Path) -> None:
-    engine, fake = _make_engine(tmp_path)
+    scheduler, fake = _make_scheduler(tmp_path)
 
-    engine.tick()
-    engine.tick()
+    scheduler.tick()
+    scheduler.tick()
 
     assert fake.calls.count("morning_run") == 1
 
 
 def test_tick_retrains_on_first_ever_tick(tmp_path: Path) -> None:
-    engine, fake = _make_engine(tmp_path)
+    scheduler, fake = _make_scheduler(tmp_path)
 
-    engine.tick()
+    scheduler.tick()
 
     assert "train_week3_models" in fake.calls
-    row = engine.db.query_one("SELECT * FROM autonomous_state WHERE id = 1")
+    row = scheduler.db.query_one("SELECT * FROM scheduler_state WHERE id = 1")
     assert row["last_retrain_at"] is not None
 
 
 def test_tick_updates_heartbeat_even_when_retrain_fails(tmp_path: Path) -> None:
     # Real-world case: a fresh system has no training data yet, so the first
-    # retrain attempt raises. The engine must still report itself alive --
+    # retrain attempt raises. The scheduler must still report itself alive --
     # last_tick_at must not depend on the retrain step succeeding.
-    engine, fake = _make_engine(tmp_path)
+    scheduler, fake = _make_scheduler(tmp_path)
 
     def _failing_train() -> dict[str, Any]:
         raise RuntimeError("not enough rows to train")
 
     fake.train_week3_models = _failing_train  # type: ignore[method-assign]
 
-    engine.tick()
+    scheduler.tick()
 
-    row = engine.db.query_one("SELECT * FROM autonomous_state WHERE id = 1")
+    row = scheduler.db.query_one("SELECT * FROM scheduler_state WHERE id = 1")
     assert row["last_tick_at"] is not None
     assert row["last_retrain_at"] is None
-    events = engine.db.query("SELECT * FROM events WHERE type = 'autonomous_engine'")
+    events = scheduler.db.query("SELECT * FROM events WHERE type = 'scheduler'")
     assert any("Retrain failed" in row["message"] for row in events)
 
 
 def test_tick_does_not_retrain_again_immediately(tmp_path: Path) -> None:
-    engine, fake = _make_engine(tmp_path)
-    engine.tick()
+    scheduler, fake = _make_scheduler(tmp_path)
+    scheduler.tick()
     fake.calls.clear()
 
-    engine.tick()
+    scheduler.tick()
 
     assert "train_week3_models" not in fake.calls
 
 
 def test_tick_retrains_when_new_match_threshold_crossed(tmp_path: Path) -> None:
-    engine, fake = _make_engine(tmp_path)
-    engine.tick()  # first tick always retrains, establishes a baseline count of 0
+    scheduler, fake = _make_scheduler(tmp_path)
+    scheduler.tick()  # first tick always retrains, establishes a baseline count of 0
     fake.calls.clear()
 
     for i in range(20):
-        _insert_cricsheet_match(engine.db, f"m{i}")
+        _insert_cricsheet_match(scheduler.db, f"m{i}")
 
-    engine.tick()
+    scheduler.tick()
 
     assert "train_week3_models" in fake.calls
 
 
 def test_tick_does_not_retrain_below_new_match_threshold(tmp_path: Path) -> None:
-    engine, fake = _make_engine(tmp_path)
-    engine.tick()
+    scheduler, fake = _make_scheduler(tmp_path)
+    scheduler.tick()
     fake.calls.clear()
 
     for i in range(5):
-        _insert_cricsheet_match(engine.db, f"m{i}")
+        _insert_cricsheet_match(scheduler.db, f"m{i}")
 
-    engine.tick()
+    scheduler.tick()
 
     assert "train_week3_models" not in fake.calls
 
 
 def test_run_forever_survives_a_failing_tick(tmp_path: Path) -> None:
-    engine, fake = _make_engine(tmp_path)
+    scheduler, fake = _make_scheduler(tmp_path)
     call_count = {"n": 0}
 
     def _sleep_then_stop(_seconds: float) -> None:
@@ -145,20 +145,20 @@ def test_run_forever_survives_a_failing_tick(tmp_path: Path) -> None:
         if call_count["n"] >= 2:
             raise StopIteration
 
-    original_tick = engine.tick
+    original_tick = scheduler.tick
 
     def _failing_then_ok_tick() -> dict:
         if call_count["n"] == 0:
             raise RuntimeError("simulated transient failure")
         return original_tick()
 
-    engine.tick = _failing_then_ok_tick  # type: ignore[method-assign]
+    scheduler.tick = _failing_then_ok_tick  # type: ignore[method-assign]
 
-    with patch("cricket_edge.autonomous_engine.time.sleep", side_effect=_sleep_then_stop):
+    with patch("cricket_edge.scheduler.time.sleep", side_effect=_sleep_then_stop):
         try:
-            engine.run_forever()
+            scheduler.run_forever()
         except StopIteration:
             pass
 
-    events = engine.db.query("SELECT * FROM events WHERE type = 'autonomous_engine'")
+    events = scheduler.db.query("SELECT * FROM events WHERE type = 'scheduler'")
     assert any("Tick failed" in row["message"] for row in events)

@@ -77,8 +77,6 @@ class Settings:
     min_edge: float = _env_float("CRICKET_EDGE_MIN_EDGE", 0.035)
     min_confidence: float = _env_float("CRICKET_EDGE_MIN_CONFIDENCE", 0.56)
     odds_stale_minutes: int = _env_int("CRICKET_EDGE_ODDS_STALE_MINUTES", 30)
-    ollama_base_url: str = os.getenv("OLLAMA_BASE_URL", "http://127.0.0.1:11434")
-    ollama_model: str = os.getenv("OLLAMA_MODEL", "gemma4-daytrader:latest")
     odds_api_key: str = os.getenv("ODDS_API_KEY", os.getenv("BET365_API_KEY", ""))
     odds_api_regions: str = os.getenv("ODDS_API_REGIONS", "uk")
     odds_api_bookmakers: str = os.getenv("ODDS_API_BOOKMAKERS", "Bet365")
@@ -101,11 +99,11 @@ class Settings:
     bet365_base_url: str = os.getenv("BET365_BASE_URL", "https://api.b365api.com")
     bet365_auth_param: str = os.getenv("BET365_AUTH_PARAM", "token")
     bet365_max_events: int = _env_int("BET365_MAX_EVENTS", 25)
-    autonomous_enabled: bool = _env_bool("CRICKET_EDGE_AUTONOMOUS_ENABLED", True)
-    autonomous_tick_seconds: int = _env_int("CRICKET_EDGE_AUTONOMOUS_TICK_SECONDS", 300)
-    autonomous_retrain_interval_hours: int = _env_int("CRICKET_EDGE_AUTONOMOUS_RETRAIN_INTERVAL_HOURS", 24)
-    autonomous_retrain_new_match_threshold: int = _env_int(
-        "CRICKET_EDGE_AUTONOMOUS_RETRAIN_NEW_MATCH_THRESHOLD", 20
+    scheduler_enabled: bool = _env_bool("CRICKET_EDGE_SCHEDULER_ENABLED", True)
+    scheduler_tick_seconds: int = _env_int("CRICKET_EDGE_SCHEDULER_TICK_SECONDS", 300)
+    scheduler_retrain_interval_hours: int = _env_int("CRICKET_EDGE_SCHEDULER_RETRAIN_INTERVAL_HOURS", 24)
+    scheduler_retrain_new_match_threshold: int = _env_int(
+        "CRICKET_EDGE_SCHEDULER_RETRAIN_NEW_MATCH_THRESHOLD", 20
     )
 
 

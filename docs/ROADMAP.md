@@ -7,7 +7,7 @@
 - demo odds
 - baseline prediction model
 - paper broker
-- agent decisions
+- decision log
 - cash-out simulation
 - event/audit log
 
@@ -52,13 +52,12 @@ Week 2 implementation includes:
 
 See `docs/WEEK2_RESULTS.md` for the first supervised-model run.
 
-## Phase 4: Stronger Agents
+## Phase 4: Stronger Decision Rules
 
-- Backtest Critic Agent
-- Research Manager Agent
-- Feature Engineer Agent
-- Risk Agent with correlated exposure checks
-- LLM prompt/version tracking
+- automated backtest critique checks
+- automated research-management checks
+- automated feature-engineering pipeline
+- correlated-exposure risk checks
 
 Detailed Week 3 and Week 4 execution plan:
 
