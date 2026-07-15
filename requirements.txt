@@ -4,6 +4,8 @@ tenacity>=9.0
 numpy>=2.0
 pytest>=9.0
 plotly>=5.24
+# Provides IANA time-zone data on Windows for ZoneInfo("Europe/London").
+tzdata>=2025.2
 
 # Planned sports-betting research stack:
 # pandas

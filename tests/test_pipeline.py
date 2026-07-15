@@ -9,6 +9,7 @@ from cricket_edge.pipeline import (
     RiskGate,
 )
 from cricket_edge.database import Database, utc_now
+from cricket_edge.paper_broker import PaperBroker
 
 
 def _insert_fixture(
@@ -39,6 +40,8 @@ def _insert_prediction(
     market_is_fresh: bool = True,
 ) -> int:
     features = {
+        'model_artifact_status': 'active',
+        'model_eligible': True,
         "market_source": market_source,
         "market_captured_at": utc_now(),
         "market_status": "fresh" if market_is_fresh else "stale",
@@ -194,6 +197,21 @@ def test_execute_does_not_place_bet_when_vetoed(tmp_path: Path) -> None:
 
     assert placed == []
     assert db.query("SELECT * FROM paper_bets") == []
+
+
+def test_paper_broker_voids_open_bet_outside_t20_scope(tmp_path: Path) -> None:
+    db = Database(tmp_path / "x.sqlite3")
+    db.init_schema()
+    fixture_id = _insert_fixture(db, "Alpha", "Beta")
+    db.execute("UPDATE fixtures SET format = 'ODI', competition = 'One Day Internationals' WHERE id = ?", (fixture_id,))
+    _place_open_bet(db, fixture_id, "Alpha", odds=2.0)
+
+    voided = PaperBroker(db).void_open_bets_outside_t20_scope()
+    bet = db.query_one("SELECT * FROM paper_bets WHERE fixture_id = ?", (fixture_id,))
+
+    assert voided == 1
+    assert bet["status"] == "voided"
+    assert bet["pnl"] == 0
 
 
 def test_run_wrapper_places_bet_end_to_end_when_nothing_vetoes_it(tmp_path: Path) -> None:

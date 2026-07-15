@@ -8,6 +8,7 @@ from .config import SETTINGS
 from .database import Database, utc_now
 from .features import build_match_features, sigmoid
 from .live_model import build_live_match_features, data_confidence_factor, load_live_model_snapshot, predict_probability
+from .model_scope import T20_MODEL_SCOPE, fixture_is_t20_eligible
 
 
 MODEL_NAME = "baseline_t20_elo_market_v1"
@@ -21,8 +22,9 @@ class PredictionEngine:
     Demo fixtures (never bettable, see risk.py) keep the transparent deterministic
     placeholder features. Real fixtures ingested from Bet365/The Odds API run
     through the actual trained pre-toss logistic model against live Elo ratings
-    and cumulative team stats, falling back to the placeholder path only if no
-    model has been trained yet.
+    and cumulative team stats. A real fixture without an active governed model
+    produces an explicitly blocked prediction instead of falling back to the
+    demo placeholder path.
     """
 
     def __init__(self, db: Database) -> None:
@@ -44,14 +46,20 @@ class PredictionEngine:
         return outputs
 
     def run_for_fixture(self, fixture: dict[str, Any]) -> list[dict[str, Any]]:
-        if fixture.get("source") in REAL_FIXTURE_SOURCES:
+        if fixture.get('source') in REAL_FIXTURE_SOURCES:
+            if not fixture_is_t20_eligible(fixture):
+                return self._run_out_of_scope_live_fixture(fixture)
             snapshot = self._get_live_snapshot()
             if snapshot:
                 return self._run_live_fixture(fixture, snapshot)
+            return self._run_blocked_live_fixture(fixture)
         return self._run_demo_fixture(fixture)
 
     def _run_demo_fixture(self, fixture: dict[str, Any]) -> list[dict[str, Any]]:
-        features = build_match_features(fixture)
+        features = build_match_features(fixture) | {
+            'model_artifact_status': 'demo_non_bettable',
+            'model_eligible': False,
+        }
         raw_prob_a = sigmoid(float(features["strength_delta"]))
         uncertainty = 0.08 + float(features["weather_penalty"])
         prob_a = 0.5 + (raw_prob_a - 0.5) * (1 - uncertainty)
@@ -60,6 +68,52 @@ class PredictionEngine:
         rows = [
             self._prediction_row(fixture, fixture["team_a"], prob_a, features, MODEL_NAME),
             self._prediction_row(fixture, fixture["team_b"], prob_b, features, MODEL_NAME),
+        ]
+        for row in rows:
+            self._upsert_prediction(row)
+        return rows
+
+    def _run_out_of_scope_live_fixture(self, fixture: dict[str, Any]) -> list[dict[str, Any]]:
+        """Persist a visible but non-bettable result for a non-T20 live fixture."""
+        blocked_model_name = "blocked_unsupported_format_v1"
+        self.db.execute(
+            "DELETE FROM predictions WHERE fixture_id = ? AND model_name != ?",
+            (fixture["id"], blocked_model_name),
+        )
+        features = {
+            "feature_source": "unsupported_model_scope",
+            "model_artifact_status": "active_but_out_of_scope",
+            "model_eligible": False,
+            "model_block_reason": "unsupported_model_scope",
+            "model_scope": T20_MODEL_SCOPE,
+            "fixture_format": fixture.get("format"),
+            "weather_penalty": 0.0,
+        }
+        rows = [
+            self._prediction_row(fixture, fixture["team_a"], 0.5, features, blocked_model_name, 0.0),
+            self._prediction_row(fixture, fixture["team_b"], 0.5, features, blocked_model_name, 0.0),
+        ]
+        for row in rows:
+            self._upsert_prediction(row)
+        return rows
+
+    def _run_blocked_live_fixture(self, fixture: dict[str, Any]) -> list[dict[str, Any]]:
+        '''Persist an auditable non-bettable outcome for a real fixture.'''
+        blocked_model_name = 'blocked_no_active_model_v1'
+        self.db.execute(
+            'DELETE FROM predictions WHERE fixture_id = ? AND model_name != ?',
+            (fixture['id'], blocked_model_name),
+        )
+        features = {
+            'feature_source': 'unavailable_live_model',
+            'model_artifact_status': 'missing_or_inactive',
+            'model_eligible': False,
+            'model_block_reason': 'no_valid_active_model',
+            'weather_penalty': 0.0,
+        }
+        rows = [
+            self._prediction_row(fixture, fixture['team_a'], 0.5, features, blocked_model_name, 0.0),
+            self._prediction_row(fixture, fixture['team_b'], 0.5, features, blocked_model_name, 0.0),
         ]
         for row in rows:
             self._upsert_prediction(row)
@@ -74,6 +128,11 @@ class PredictionEngine:
             (fixture["id"], snapshot["model_name"]),
         )
         context = build_live_match_features(fixture, snapshot, self.db)
+        context['features'] |= {
+            'model_artifact_status': 'active',
+            'model_eligible': True,
+            'model_registry_generated_at': snapshot['registry_generated_at'],
+        }
         prob_a = predict_probability(snapshot, context["features"])
         confidence_scale = data_confidence_factor(context)
         prob_a = min(0.96, max(0.04, prob_a))

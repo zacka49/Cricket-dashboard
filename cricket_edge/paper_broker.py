@@ -5,6 +5,7 @@ from typing import Any
 
 from .database import Database, utc_now
 from .match_linkage import link_fixture_to_cricsheet, resolve_winner_for_fixture
+from .model_scope import fixture_is_t20_eligible
 
 
 class PaperBroker:
@@ -30,26 +31,53 @@ class PaperBroker:
         }
 
     def already_has_open_bet(self, fixture_id: int, market: str, selection: str) -> bool:
-        row = self.db.query_one(
-            """
-            SELECT id FROM paper_bets
-            WHERE fixture_id = ? AND market = ? AND selection = ? AND status = 'open'
-            LIMIT 1
-            """,
-            (fixture_id, market, selection),
-        )
-        return bool(row)
+        return self.fixture_market_has_open_bet(fixture_id, market)
 
     def fixture_market_has_open_bet(self, fixture_id: int, market: str) -> bool:
         row = self.db.query_one(
             """
-            SELECT id FROM paper_bets
-            WHERE fixture_id = ? AND market = ? AND status = 'open'
+            SELECT b.id
+            FROM paper_bets b
+            JOIN fixtures existing ON existing.id = b.fixture_id
+            JOIN fixtures candidate ON candidate.id = ?
+            WHERE b.market = ? AND b.status = 'open'
+              AND existing.match_date = candidate.match_date
+              AND (
+                    (existing.team_a = candidate.team_a AND existing.team_b = candidate.team_b)
+                 OR (existing.team_a = candidate.team_b AND existing.team_b = candidate.team_a)
+              )
             LIMIT 1
             """,
             (fixture_id, market),
         )
         return bool(row)
+
+    def void_open_bets_outside_t20_scope(self) -> int:
+        """Close any legacy/live entry that the T20 model was not qualified to make."""
+        bets = self.db.query(
+            """
+            SELECT b.id, f.*
+            FROM paper_bets b
+            JOIN fixtures f ON f.id = b.fixture_id
+            WHERE b.status = 'open'
+            """
+        )
+        voided = 0
+        for bet in bets:
+            if fixture_is_t20_eligible(bet):
+                continue
+            note = "Voided automatically: the active paper model is T20-only; this fixture is outside its supported scope."
+            self.db.execute(
+                """
+                UPDATE paper_bets
+                SET status = 'voided', closed_at = ?, pnl = 0, notes = ?
+                WHERE id = ? AND status = 'open'
+                """,
+                (utc_now(), note, bet["id"]),
+            )
+            self.db.log_event("broker", f"Voided out-of-scope paper bet #{bet['id']}.", {"bet_id": bet["id"]})
+            voided += 1
+        return voided
 
     def place_bet(self, decision: dict[str, Any], prediction: dict[str, Any]) -> int | None:
         stake = float(decision.get("stake", 0))

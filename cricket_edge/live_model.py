@@ -29,9 +29,17 @@ def load_live_model_snapshot(db: Database, model_name: str = PRETOSS_MODEL_NAME)
     """Latest trained coefficients/calibrator for a logistic model, plus current
     Elo ratings and cumulative team stats needed to build live features.
 
-    Returns None if the model hasn't been trained yet (fresh checkout, data
-    pipeline/training scripts never run) so callers can fall back rather than crash.
+    A snapshot is eligible for live paper-betting research only when its matching
+    registry entry is the active, calibrated, pre-toss model. Returning None is
+    intentional when governance has not promoted a model: callers must fail closed
+    rather than substituting a demo baseline for a real fixture.
     """
+    registry = db.query_one(
+        'SELECT generated_at FROM model_registry WHERE model_name = ? AND active = 1 AND status = \'active\' AND timing = \'pre_toss\' AND calibrated = 1 LIMIT 1',
+        (model_name,),
+    )
+    if not registry:
+        return None
     latest = db.query_one(
         """
         SELECT payload_json
@@ -49,6 +57,7 @@ def load_live_model_snapshot(db: Database, model_name: str = PRETOSS_MODEL_NAME)
     if not coefficients:
         return None
     return {
+        'registry_generated_at': registry['generated_at'],
         "model_name": model_name,
         "coefficients": {row["feature"]: row for row in coefficients},
         "calibrator": payload.get("calibrator", {"a": 1.0, "b": 0.0}),

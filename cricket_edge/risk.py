@@ -40,6 +40,12 @@ def evaluate_candidate(
     features = _prediction_features(prediction)
 
     reasons: list[str] = []
+    if features.get("model_block_reason") == "unsupported_model_scope":
+        reasons.append("model supports T20 fixtures only")
+    elif features.get('model_artifact_status') != 'active':
+        reasons.append('no_valid_active_model')
+    if features.get('model_eligible') is not True:
+        reasons.append('prediction_not_bettable')
     if features.get("market_source") not in APPROVED_REAL_ODDS_SOURCES:
         reasons.append("no fresh real bookmaker odds")
     elif not bool(features.get("market_is_fresh")):

@@ -16,6 +16,7 @@ from .data_sources import FreeDataSources
 from .database import Database, utc_now
 from .live_model import normalize_team_name
 from .match_linkage import link_fixture_to_cricsheet, resolve_winner_for_fixture
+from .model_scope import infer_cricket_format
 from .odds_api_io import extract_match_winner_outcomes as extract_odds_api_io_match_winner_outcomes
 from .odds_api_io import parse_events, parse_sports
 from .odds_math import implied_probability
@@ -821,18 +822,20 @@ def _upsert_bet365_fixture(db: Database, event: dict[str, Any], status_override:
     local_dt = _event_datetime(event)
     status = status_override or ("live" if str(event.get("time_status")) == "1" else "scheduled")
     league = event.get("league") if isinstance(event.get("league"), dict) else {}
+    fixture_format = infer_cricket_format(league.get("name"), league.get("slug"), event.get("sport"))
     db.execute(
         """
         INSERT OR IGNORE INTO fixtures(
             match_date, start_time, competition, format, team_a, team_b, venue,
             status, weather_json, source, created_at
         )
-        VALUES (?, ?, ?, 'T20', ?, ?, 'Bet365', ?, '{}', ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, 'Bet365', ?, '{}', ?, ?)
         """,
         (
             local_dt.date().isoformat(),
             local_dt.strftime("%H:%M"),
             str(league.get("name") or "Bet365 Cricket"),
+            fixture_format,
             home,
             away,
             status,
@@ -853,10 +856,10 @@ def _upsert_bet365_fixture(db: Database, event: dict[str, Any], status_override:
     db.execute(
         """
         UPDATE fixtures
-        SET status = ?, source = ?
+        SET format = ?, status = ?, source = ?
         WHERE id = ?
         """,
-        (status, BET365_SOURCE, row["id"]),
+        (fixture_format, status, BET365_SOURCE, row["id"]),
     )
     return int(row["id"])
 
@@ -981,18 +984,20 @@ def _upsert_the_odds_api_fixture(db: Database, event: dict[str, Any]) -> int:
     if not home or not away:
         raise ValueError("The Odds API event is missing home/away team names.")
     local_dt = _the_odds_api_event_datetime(event)
+    fixture_format = infer_cricket_format(event.get("sport_key"), event.get("sport_title"))
     db.execute(
         """
         INSERT OR IGNORE INTO fixtures(
             match_date, start_time, competition, format, team_a, team_b, venue,
             status, weather_json, source, created_at
         )
-        VALUES (?, ?, ?, 'T20', ?, ?, 'The Odds API', 'scheduled', '{}', ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, 'The Odds API', 'scheduled', '{}', ?, ?)
         """,
         (
             local_dt.date().isoformat(),
             local_dt.strftime("%H:%M"),
             str(event.get("sport_title") or "The Odds API Cricket"),
+            fixture_format,
             home,
             away,
             THE_ODDS_API_SOURCE,
@@ -1009,6 +1014,7 @@ def _upsert_the_odds_api_fixture(db: Database, event: dict[str, Any]) -> int:
     )
     if not row:
         raise RuntimeError("Could not upsert The Odds API fixture.")
+    db.execute("UPDATE fixtures SET format = ? WHERE id = ?", (fixture_format, row["id"]))
     return int(row["id"])
 
 

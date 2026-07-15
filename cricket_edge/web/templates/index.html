@@ -8,7 +8,7 @@
   </head>
   <body>
     <div class="app-shell">
-      <aside class="sidebar">
+      <aside class="sidebar" aria-label="Cricket Edge navigation and actions">
         <div class="brand">
           <div class="brand-mark">CE</div>
           <div>
@@ -17,35 +17,56 @@
           </div>
         </div>
 
-        <div class="mode-banner">
-          <span class="dot"></span>
-          Paper mode only
+        <div class="status-stack">
+          <div class="mode-banner">
+            <span class="dot"></span>
+            Paper mode only
+          </div>
+          <div class="mode-banner" id="schedulerBanner">
+            <span class="dot" id="schedulerDot"></span>
+            <span id="schedulerText">Scheduler: checking...</span>
+          </div>
         </div>
 
-        <div class="mode-banner" id="schedulerBanner">
-          <span class="dot" id="schedulerDot"></span>
-          <span id="schedulerText">Scheduler: checking&hellip;</span>
-        </div>
-
-        <nav class="nav-list" id="pageNav">
-          <button class="nav-link active" data-page="overview">Trading Floor</button>
-          <button class="nav-link" data-page="models">Quant Research</button>
-          <button class="nav-link" data-page="bets">Positions</button>
-          <button class="nav-link" data-page="data">Ops &amp; Compliance</button>
+        <nav class="nav-list" id="pageNav" aria-label="Dashboard pages">
+          <button class="nav-link active" data-page="command">Command</button>
+          <button class="nav-link" data-page="opportunities">Opportunities</button>
+          <button class="nav-link" data-page="research">Research</button>
+          <button class="nav-link" data-page="portfolio">Portfolio</button>
+          <button class="nav-link" data-page="data">Data Health</button>
         </nav>
+        <button class='nav-link guide-nav-link' data-page='guide'>Guide</button>
 
         <div class="control-stack">
-          <p class="control-label">Live workflow</p>
-          <button id="runMorning" class="primary">Run Morning</button>
+          <p class="control-label">Routine</p>
           <button id="monitorTick">Monitor Tick</button>
-          <button id="pullLiveData">Pull All Live Data</button>
           <button id="fetchBet365Odds">Fetch Live Odds</button>
+        </div>
+
+        <div class="control-stack">
+          <p class="control-label">Workflow</p>
+          <button id="runMorning" class="primary">Run Morning</button>
+          <button id="pullLiveData">Pull All Live Data</button>
           <button id="settleBets">Settle Paper</button>
+        </div>
+
+        <details class="command-drawer">
+          <summary>Research commands</summary>
+          <div class="control-stack nested">
+            <button id="trainElo">Train Elo</button>
+            <button id="trainLogistic">Train Logistic</button>
+            <button id="trainWeek3">Force Retrain Now</button>
+            <button id="runWeek4">Rebuild Market Data</button>
+          </div>
+        </details>
+
+        <div class="control-stack">
+          <p class="control-label">Destructive</p>
           <button id="resetDemo" class="danger">Reset Demo</button>
         </div>
 
         <div class="small-note">
-          Uses deterministic demo data until free sources or local files are connected.
+          Demo fixtures and demo odds are never bettable. Paper bets require fresh real bookmaker odds.
         </div>
       </aside>
 
@@ -53,43 +74,53 @@
         <section class="topbar">
           <div>
             <p class="eyebrow">Local research dashboard</p>
-            <h2 id="pageTitle">Cricket model decisions, paper execution, and live monitoring</h2>
+            <h2 id="pageTitle">Today status, blockers, and next actions</h2>
           </div>
           <div id="lastUpdated" class="last-updated">Loading...</div>
         </section>
 
-        <!-- ============ OVERVIEW ============ -->
-        <section class="page active" data-page="overview">
+        <section id="actionStatus" class="action-status" aria-live="polite"></section>
+
+        <section class="page active" data-page="command">
+          <section class="status-strip" id="commandStatusStrip"></section>
           <section class="metrics-grid" id="overview"></section>
 
-          <div class="panel">
-            <div class="panel-header">
-              <div>
-                <p class="eyebrow">System design</p>
-                <h3>What this is</h3>
+          <div class="layout-grid command-grid">
+            <div class="panel wide critical-panel">
+              <div class="panel-header">
+                <div>
+                  <p class="eyebrow">Paper betting gate</p>
+                  <h3>Can We Place Paper Bets?</h3>
+                </div>
+                <span class="pill" id="gateSummary">Checking</span>
               </div>
+              <div id="readinessPanel"></div>
             </div>
-            <p class="about-copy">
-              A local-first cricket betting research system that separates two layers by design: statistical
-              models estimate probability, fair odds, and edge; hard risk rules then decide whether execution is
-              allowed and at what stake. The broker is paper-only until the models prove calibration and
-              closing-line value over a meaningful sample.
-            </p>
-          </div>
 
-          <div class="panel">
-            <div class="panel-header">
-              <div>
-                <p class="eyebrow">Decision workflow</p>
-                <h3>Decision Pipeline</h3>
+            <div class="panel">
+              <div class="panel-header">
+                <div>
+                  <p class="eyebrow">Latest action</p>
+                  <h3>Workflow Result</h3>
+                </div>
               </div>
-              <span class="pill">Morning run &amp; monitor tick</span>
+              <div id="workflowResult"></div>
             </div>
-            <div id="decisionPipeline" class="pipeline"></div>
           </div>
 
           <div class="layout-grid">
             <div class="panel wide">
+              <div class="panel-header">
+                <div>
+                  <p class="eyebrow">Decision workflow</p>
+                  <h3>Decision Pipeline</h3>
+                </div>
+                <span class="pill">Morning run &amp; monitor tick</span>
+              </div>
+              <div id="decisionPipeline" class="pipeline vertical"></div>
+            </div>
+
+            <div class="panel">
               <div class="panel-header">
                 <div>
                   <p class="eyebrow">Daily briefing</p>
@@ -98,140 +129,96 @@
               </div>
               <div id="briefing" class="briefing"></div>
             </div>
-
-            <div class="panel">
-              <div class="panel-header">
-                <div>
-                  <p class="eyebrow">Portfolio evidence</p>
-                  <h3>Readiness Checklist</h3>
-                </div>
-              </div>
-              <div id="readinessPanel"></div>
-            </div>
           </div>
         </section>
 
-        <!-- ============ MODELS ============ -->
-        <section class="page" data-page="models">
+        <section class="page" data-page="opportunities">
           <div class="panel">
             <div class="panel-header">
               <div>
-                <p class="eyebrow">Retrain</p>
-                <h3>Model Training</h3>
-              </div>
-              <div class="inline-actions">
-                <button id="trainElo">Train Elo</button>
-                <button id="trainLogistic">Train Logistic</button>
-                <button id="trainWeek3">Force Retrain Now</button>
-                <button id="runWeek4">Rebuild Market Data</button>
-              </div>
-            </div>
-            <div id="trainingDataPanel"></div>
-          </div>
-
-          <div class="panel">
-            <div class="panel-header">
-              <div>
-                <p class="eyebrow">All trained models</p>
-                <h3>Model Comparison</h3>
-              </div>
-              <span class="pill">Brier &middot; log loss &middot; accuracy</span>
-            </div>
-            <div class="chart-container" id="chart-model_comparison"></div>
-          </div>
-
-          <div class="layout-grid">
-            <div class="panel wide">
-              <div class="panel-header">
-                <div>
-                  <p class="eyebrow">Reliability</p>
-                  <h3>Calibration &mdash; Active Model</h3>
-                </div>
-              </div>
-              <div class="chart-container" id="chart-calibration"></div>
-            </div>
-
-            <div class="panel">
-              <div class="panel-header">
-                <div>
-                  <p class="eyebrow">Registry</p>
-                  <h3>Model Status</h3>
-                </div>
-              </div>
-              <div id="modelGovernancePanel"></div>
-            </div>
-          </div>
-
-          <div class="layout-grid">
-            <div class="panel wide">
-              <div class="panel-header">
-                <div>
-                  <p class="eyebrow">Interpretability</p>
-                  <h3>Feature Importance</h3>
-                </div>
-              </div>
-              <div class="chart-container" id="chart-feature_importance"></div>
-            </div>
-
-            <div class="panel">
-              <div class="panel-header">
-                <div>
-                  <p class="eyebrow">Ratings</p>
-                  <h3>Top Elo Teams</h3>
-                </div>
-              </div>
-              <div class="chart-container" id="chart-elo_ratings"></div>
-            </div>
-          </div>
-
-          <div class="panel">
-            <div class="panel-header">
-              <div>
-                <p class="eyebrow">Model validation</p>
-                <h3>Historical Strategy Backtest</h3>
-              </div>
-              <span class="pill">No lookahead</span>
-            </div>
-            <div id="backtestSummary"></div>
-            <div class="layout-grid">
-              <div>
-                <h4 class="section-title">Cumulative P&amp;L</h4>
-                <div class="chart-container" id="chart-backtest_pnl"></div>
-              </div>
-              <div>
-                <h4 class="section-title">ROI by Edge Bucket</h4>
-                <div class="chart-container" id="chart-edge_bucket"></div>
-              </div>
-            </div>
-            <h4 class="section-title">By Competition</h4>
-            <div id="backtestCompetitionPanel"></div>
-          </div>
-        </section>
-
-        <!-- ============ PAPER BETS ============ -->
-        <section class="page" data-page="bets">
-          <section class="stat-cards" id="betsStats"></section>
-
-          <div class="panel">
-            <div class="panel-header">
-              <div>
-                <p class="eyebrow">Prediction model</p>
-                <h3>Today and Upcoming Matches</h3>
+                <p class="eyebrow">Candidate review</p>
+                <h3>Fixtures, Predictions, and Odds</h3>
               </div>
               <span class="pill">Match winner</span>
             </div>
+            <div id="opportunityFilters" class="filter-bar"></div>
             <div id="matchesTable"></div>
           </div>
+        </section>
+
+        <section class="page" data-page="research">
+          <section class="stat-cards" id="researchSummary"></section>
 
           <div class="panel">
             <div class="panel-header">
               <div>
-                <p class="eyebrow">Track record</p>
-                <h3>Equity Curve</h3>
+                <p class="eyebrow">Evidence</p>
+                <h3>Research Lab</h3>
+              </div>
+              <div class="tab-list" id="researchTabs" role="tablist">
+                <button class="tab active" data-tab="models">Models</button>
+                <button class="tab" data-tab="calibration">Calibration</button>
+                <button class="tab" data-tab="backtest">Backtest</button>
+                <button class="tab" data-tab="features">Features</button>
               </div>
             </div>
-            <div class="chart-container" id="chart-equity_curve"></div>
+
+            <div class="tab-page active" data-tab-page="models">
+              <div class="layout-grid">
+                <div class="wide">
+                  <div class="chart-container" id="chart-model_comparison"></div>
+                </div>
+                <div id="modelGovernancePanel"></div>
+              </div>
+            </div>
+
+            <div class="tab-page" data-tab-page="calibration">
+              <div class="chart-container" id="chart-calibration"></div>
+              <div id="calibrationNotes" class="helper-note"></div>
+            </div>
+
+            <div class="tab-page" data-tab-page="backtest">
+              <div id="backtestSummary"></div>
+              <div class="layout-grid">
+                <div>
+                  <h4 class="section-title">Cumulative P&amp;L</h4>
+                  <div class="chart-container" id="chart-backtest_pnl"></div>
+                </div>
+                <div>
+                  <h4 class="section-title">ROI by Edge Bucket</h4>
+                  <div class="chart-container" id="chart-edge_bucket"></div>
+                </div>
+              </div>
+              <div id="backtestBreakdowns"></div>
+            </div>
+
+            <div class="tab-page" data-tab-page="features">
+              <div class="layout-grid">
+                <div class="wide">
+                  <div class="chart-container" id="chart-feature_importance"></div>
+                </div>
+                <div>
+                  <h4 class="section-title">Top Elo Teams</h4>
+                  <div class="chart-container compact" id="chart-elo_ratings"></div>
+                </div>
+              </div>
+            </div>
           </div>
+
+          <details class="panel command-drawer-panel">
+            <summary>Research commands</summary>
+            <div class="inline-actions command-row">
+              <button data-trigger="trainElo">Train Elo</button>
+              <button data-trigger="trainLogistic">Train Logistic</button>
+              <button data-trigger="trainWeek3">Force Retrain Now</button>
+              <button data-trigger="runWeek4">Rebuild Market Data</button>
+            </div>
+            <p class="small-inline-note">Retraining and market rebuilds can take time. Results are written to model runs, the registry, and the event log.</p>
+          </details>
+        </section>
+
+        <section class="page" data-page="portfolio">
+          <section class="stat-cards" id="betsStats"></section>
 
           <div class="layout-grid">
             <div class="panel wide">
@@ -240,6 +227,7 @@
                   <p class="eyebrow">Execution</p>
                   <h3>Paper Bets</h3>
                 </div>
+                <div id="portfolioFilters" class="filter-bar compact-filters"></div>
               </div>
               <div id="betsTable"></div>
             </div>
@@ -247,11 +235,11 @@
             <div class="panel">
               <div class="panel-header">
                 <div>
-                  <p class="eyebrow">Decision layer</p>
-                  <h3>Recent Decisions</h3>
+                  <p class="eyebrow">Track record</p>
+                  <h3>Equity Curve</h3>
                 </div>
               </div>
-              <div id="decisionsList" class="decision-list"></div>
+              <div class="chart-container compact" id="chart-equity_curve"></div>
             </div>
           </div>
 
@@ -266,17 +254,28 @@
           </div>
         </section>
 
-        <!-- ============ DATA & LOGS ============ -->
         <section class="page" data-page="data">
-          <div class="panel">
-            <div class="panel-header">
-              <div>
-                <p class="eyebrow">Live odds feed</p>
-                <h3>Odds, Sources, and Freshness</h3>
+          <div class="layout-grid">
+            <div class="panel wide">
+              <div class="panel-header">
+                <div>
+                  <p class="eyebrow">Live odds feed</p>
+                  <h3>Odds, Sources, and Freshness</h3>
+                </div>
+                <span class="pill">Paper only</span>
               </div>
-              <span class="pill">Paper only</span>
+              <div id="marketDataPanel"></div>
             </div>
-            <div id="marketDataPanel"></div>
+
+            <div class="panel">
+              <div class="panel-header">
+                <div>
+                  <p class="eyebrow">Data coverage</p>
+                  <h3>Model Data Health</h3>
+                </div>
+              </div>
+              <div id="dataCoveragePanel"></div>
+            </div>
           </div>
 
           <section class="panel" id="logs">
@@ -285,9 +284,69 @@
                 <p class="eyebrow">System trail</p>
                 <h3>Event Log</h3>
               </div>
+              <div id="eventFilters" class="filter-bar compact-filters"></div>
             </div>
             <div id="eventLog" class="event-log"></div>
           </section>
+        </section>
+        <section class='page' data-page='guide'>
+          <div class='panel guide-hero'>
+            <p class='eyebrow'>Start here</p>
+            <h3>How to use Cricket Edge</h3>
+            <p class='guide-lead'>Cricket Edge is a paper-only research dashboard. It records simulated positions for research; it does not place real-money bets. A blocked gate is useful information, not an error to work around.</p>
+          </div>
+
+          <div class='guide-grid'>
+            <section class='panel'>
+              <p class='eyebrow'>Daily workflow</p>
+              <h3>Work in this order</h3>
+              <ol class='guide-steps'>
+                <li><strong>Check Command.</strong> Read the Paper Betting Gate and resolve any red blockers first.</li>
+                <li><strong>Refresh data.</strong> Use Fetch Live Odds, then confirm odds are fresh in Data Health.</li>
+                <li><strong>Run Morning.</strong> This updates the paper workflow only when the required data and model checks pass.</li>
+                <li><strong>Review Opportunities.</strong> Inspect fixtures, prices, predicted probability, edge, confidence, and skip reasons.</li>
+                <li><strong>Monitor and settle.</strong> Use Monitor Tick for open paper positions and Settle Paper only after results are available.</li>
+              </ol>
+            </section>
+
+            <section class='panel'>
+              <p class='eyebrow'>Safety rules</p>
+              <h3>What the system will not do</h3>
+              <ul class='guide-list'>
+                <li>It has no real-money betting connector.</li>
+                <li>Demo fixtures and demo odds are never eligible for a paper bet.</li>
+                <li>Missing, stale, or unsupported data should produce a skip or a blocked readiness state.</li>
+                <li>A real fixture needs a valid active model artifact before it can be considered.</li>
+                <li>Do not use Reset Demo if you want to keep research history; it is a destructive reset.</li>
+              </ul>
+            </section>
+          </div>
+
+          <div class='guide-grid'>
+            <section class='panel'>
+              <p class='eyebrow'>Pages</p>
+              <h3>Where to find things</h3>
+              <dl class='guide-reference'>
+                <div><dt>Command</dt><dd>Current blockers, paper-betting readiness, workflow status, and next actions.</dd></div>
+                <div><dt>Opportunities</dt><dd>Scheduled fixtures with current prices, model output, and candidate decision context.</dd></div>
+                <div><dt>Research</dt><dd>Model registry, calibration, backtests, and feature evidence. Use this to assess evidence, not to chase a result.</dd></div>
+                <div><dt>Portfolio</dt><dd>Open and settled paper bets, exposure, simulated equity, and closing-line evaluation.</dd></div>
+                <div><dt>Data Health</dt><dd>Odds-feed freshness, source coverage, data diagnostics, and the event trail.</dd></div>
+              </dl>
+            </section>
+
+            <section class='panel'>
+              <p class='eyebrow'>Actions and troubleshooting</p>
+              <h3>Using the sidebar safely</h3>
+              <dl class='guide-reference'>
+                <div><dt>Fetch Live Odds</dt><dd>Pulls the configured bookmaker feed. Check freshness and errors afterwards.</dd></div>
+                <div><dt>Pull All Live Data</dt><dd>Runs the broader live-data refresh. It can take longer than a simple odds fetch.</dd></div>
+                <div><dt>Research commands</dt><dd>Train or rebuild research artifacts. These are not daily actions and may take time.</dd></div>
+                <div><dt>Action status</dt><dd>Every click reports success, progress, or an error near the top of the dashboard.</dd></div>
+                <div><dt>When something fails</dt><dd>Read the action message, then open Data Health and Event Log for the provider or workflow detail.</dd></div>
+              </dl>
+            </section>
+          </div>
         </section>
       </main>
     </div>

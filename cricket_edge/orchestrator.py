@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+import json
+import re
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from .pipeline import (
@@ -34,7 +36,8 @@ class CricketEdgeOrchestrator:
     def morning_run(self) -> dict[str, Any]:
         seed_demo_data(self.db)
         ensure_demo_odds(self.db)
-        odds_refresh = self.fetch_bet365_odds()
+        voided_out_of_scope = PaperBroker(self.db).void_open_bets_outside_t20_scope()
+        odds_refresh = self.refresh_live_odds_if_needed()
         data_status = DataHealthCheck(self.db).run()
         predictions = PredictionEngine(self.db).run_for_open_fixtures()
         bet_evaluator = BetEvaluator(self.db)
@@ -48,12 +51,13 @@ class CricketEdgeOrchestrator:
             "predictions": len(predictions),
             "decisions": len(reviewed),
             "bets_placed": len(placed),
+            "bets_voided_out_of_scope": voided_out_of_scope,
             "briefing": briefing,
             "account": PaperBroker(self.db).account_summary(),
         }
 
     def monitor_tick(self) -> dict[str, Any]:
-        odds_refresh = self.fetch_bet365_odds()
+        odds_refresh = self.refresh_live_odds_if_needed()
         simulate_market_move(self.db)
         predictions = PredictionEngine(self.db).run_for_open_fixtures()
         actions = PositionMonitor(self.db).run()
@@ -85,6 +89,64 @@ class CricketEdgeOrchestrator:
 
     def fetch_bet365_odds(self) -> dict[str, Any]:
         return fetch_bet365_cricket_odds(self.db)
+
+    def refresh_live_odds_if_needed(self) -> dict[str, Any]:
+        """Avoid spending provider quota when approved odds are still usable.
+
+        Explicit dashboard fetches continue to call ``fetch_bet365_odds``
+        directly. This guard is for scheduled and routine workflow runs, where
+        another refresh cannot improve a fresh snapshot and a 429 must not turn
+        into repeated quota-consuming retries.
+        """
+        retry_at = self._rate_limit_retry_at()
+        if retry_at:
+            return {
+                "ok": True,
+                "skipped": True,
+                "reason": "provider_rate_limited",
+                "retry_at": retry_at,
+            }
+        status = (latest_week4_report(self.db).get("bet365_status") or {})
+        if status.get("is_fresh"):
+            return {
+                "ok": True,
+                "skipped": True,
+                "reason": "fresh_real_odds_available",
+                "latest_capture": status.get("latest_capture"),
+            }
+        return self.fetch_bet365_odds()
+
+    def _rate_limit_retry_at(self) -> str | None:
+        event = self.db.query_one(
+            """
+            SELECT timestamp, payload_json
+            FROM events
+            WHERE type = 'market' AND message LIKE 'Fetched % cricket odds%'
+            ORDER BY timestamp DESC, id DESC
+            LIMIT 1
+            """
+        )
+        if not event:
+            return None
+        try:
+            payload = json.loads(event["payload_json"] or "{}")
+        except json.JSONDecodeError:
+            return None
+        errors = payload.get("errors") or []
+        messages = " ".join(str(item.get("error") or "") for item in errors if isinstance(item, dict))
+        match = re.search(r"resets? in\s+(\d+)\s+minutes?", messages, flags=re.IGNORECASE)
+        if not match:
+            return None
+        try:
+            observed_at = datetime.fromisoformat(str(event["timestamp"]).replace("Z", "+00:00"))
+        except ValueError:
+            return None
+        if observed_at.tzinfo is None:
+            observed_at = observed_at.replace(tzinfo=timezone.utc)
+        retry_at = observed_at + timedelta(minutes=int(match.group(1)))
+        if retry_at <= datetime.now(timezone.utc):
+            return None
+        return retry_at.isoformat()
 
     def pull_live_data(self) -> dict[str, Any]:
         return pull_all_live_data(self.db)
