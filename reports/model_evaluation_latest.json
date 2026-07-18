@@ -1,0 +1,1177 @@
+{
+  "actions": {
+    "data_build": {
+      "elo": {
+        "accuracy": 0.628566101062838,
+        "brier": 0.22287084382176148,
+        "config": {
+          "home_advantage": 18.0,
+          "k_factor": 24.0,
+          "min_matches_for_eval": 50,
+          "start_rating": 1500.0
+        },
+        "log_loss": 0.6358856270445854,
+        "model_name": "t20_team_elo_v1",
+        "n_matches": 5363,
+        "recent_180": {
+          "accuracy": 0.6410684474123539,
+          "brier": 0.21897791652754595,
+          "log_loss": 0.6283900066777963,
+          "n_matches": 599
+        },
+        "recent_365": {
+          "accuracy": 0.6509598603839442,
+          "brier": 0.21407557940663177,
+          "log_loss": 0.61713707504363,
+          "n_matches": 1146
+        },
+        "teams": 109,
+        "top_ratings": [
+          {
+            "rating": 1922.8,
+            "team": "England"
+          },
+          {
+            "rating": 1919.3,
+            "team": "Australia"
+          },
+          {
+            "rating": 1835.3,
+            "team": "India"
+          },
+          {
+            "rating": 1819.3,
+            "team": "South Africa"
+          },
+          {
+            "rating": 1749.9,
+            "team": "New Zealand"
+          },
+          {
+            "rating": 1721.9,
+            "team": "Ireland"
+          },
+          {
+            "rating": 1707.9,
+            "team": "Pakistan"
+          },
+          {
+            "rating": 1702.9,
+            "team": "United Arab Emirates"
+          },
+          {
+            "rating": 1694.7,
+            "team": "Sri Lanka"
+          },
+          {
+            "rating": 1683.4,
+            "team": "West Indies"
+          },
+          {
+            "rating": 1682.5,
+            "team": "Uganda"
+          },
+          {
+            "rating": 1666.9,
+            "team": "Spain"
+          }
+        ]
+      },
+      "ingest": {
+        "files_seen": 5524,
+        "innings_inserted": 11061,
+        "matches_inserted": 5524,
+        "skipped": 0
+      },
+      "zip_path": "D:\\Zackary Workspace\\02 Sports Betting\\cricket-edge\\data\\raw\\cricsheet\\t20s_json.zip"
+    },
+    "model_training": {
+      "active_model": "t20_logistic_pretoss_calibrated_v1",
+      "comparison": [
+        {
+          "active": 1,
+          "calibrated": true,
+          "ece_test": 0.040675,
+          "model_name": "t20_logistic_pretoss_calibrated_v1",
+          "recent_365_brier": 0.20122615620029113,
+          "test_accuracy": 0.6795031055900621,
+          "test_brier": 0.20324308239079397,
+          "test_log_loss": 0.590121424029446,
+          "timing": "pre_toss"
+        },
+        {
+          "active": 0,
+          "calibrated": true,
+          "ece_test": 0.035086,
+          "model_name": "t20_logistic_posttoss_calibrated_v1",
+          "recent_365_brier": 0.2011297455740355,
+          "test_accuracy": 0.6770186335403726,
+          "test_brier": 0.2033100479775547,
+          "test_log_loss": 0.5902919378727426,
+          "timing": "post_toss"
+        },
+        {
+          "active": 0,
+          "calibrated": true,
+          "ece_test": 0.054455,
+          "model_name": "t20_gradient_boosting_posttoss_calibrated_v1",
+          "recent_365_brier": 0.20437189510558282,
+          "test_accuracy": 0.6745341614906832,
+          "test_brier": 0.20541932179346908,
+          "test_log_loss": 0.5955388039951721,
+          "timing": "post_toss"
+        }
+      ],
+      "gradient_boosting": {
+        "calibrated": true,
+        "calibration": {
+          "ece_test": 0.054455,
+          "gradient_boosting_test": [
+            {
+              "actual_rate": 0.0649,
+              "avg_prediction": 0.1625,
+              "bucket": "0.1-0.2",
+              "n": 77
+            },
+            {
+              "actual_rate": 0.3684,
+              "avg_prediction": 0.2524,
+              "bucket": "0.2-0.3",
+              "n": 95
+            },
+            {
+              "actual_rate": 0.4252,
+              "avg_prediction": 0.349,
+              "bucket": "0.3-0.4",
+              "n": 127
+            },
+            {
+              "actual_rate": 0.4884,
+              "avg_prediction": 0.4498,
+              "bucket": "0.4-0.5",
+              "n": 86
+            },
+            {
+              "actual_rate": 0.5275,
+              "avg_prediction": 0.5523,
+              "bucket": "0.5-0.6",
+              "n": 91
+            },
+            {
+              "actual_rate": 0.6484,
+              "avg_prediction": 0.6499,
+              "bucket": "0.6-0.7",
+              "n": 91
+            },
+            {
+              "actual_rate": 0.709,
+              "avg_prediction": 0.7447,
+              "bucket": "0.7-0.8",
+              "n": 134
+            },
+            {
+              "actual_rate": 0.8846,
+              "avg_prediction": 0.8354,
+              "bucket": "0.8-0.9",
+              "n": 104
+            }
+          ]
+        },
+        "calibrator": {
+          "a": 1.594165,
+          "b": 0.039685
+        },
+        "config": {
+          "estimators": 140,
+          "learning_rate": 0.09,
+          "threshold_count": 16,
+          "train_fraction": 0.7,
+          "validation_fraction": 0.15
+        },
+        "feature_names": [
+          "elo_diff",
+          "experience_diff",
+          "win_rate_diff",
+          "avg_runs_for_diff",
+          "avg_runs_against_diff",
+          "avg_wickets_taken_diff",
+          "venue_experience_diff",
+          "rest_days_diff",
+          "female_match",
+          "world_cup_match",
+          "toss_team_a",
+          "toss_bat_team_a"
+        ],
+        "model_name": "t20_gradient_boosting_posttoss_calibrated_v1",
+        "n_matches": 5363,
+        "splits": {
+          "recent_365": {
+            "accuracy": 0.6815008726003491,
+            "brier": 0.20437189510558282,
+            "log_loss": 0.5939720568489777,
+            "n_matches": 1146
+          },
+          "test": {
+            "accuracy": 0.6745341614906832,
+            "brier": 0.20541932179346908,
+            "log_loss": 0.5955388039951721,
+            "n_matches": 805
+          },
+          "train": {
+            "accuracy": 0.6779435269046351,
+            "brier": 0.20474713004700013,
+            "log_loss": 0.5953885417974865,
+            "n_matches": 3754
+          },
+          "validation": {
+            "accuracy": 0.6753731343283582,
+            "brier": 0.2028029336383701,
+            "log_loss": 0.5901405350943638,
+            "n_matches": 804
+          }
+        },
+        "stump_count": 140,
+        "timing": "post_toss",
+        "top_stump_features": [
+          {
+            "count": 77,
+            "feature": "experience_diff"
+          },
+          {
+            "count": 41,
+            "feature": "elo_diff"
+          },
+          {
+            "count": 21,
+            "feature": "avg_runs_for_diff"
+          },
+          {
+            "count": 1,
+            "feature": "win_rate_diff"
+          }
+        ]
+      },
+      "posttoss_logistic": {
+        "calibrated": true,
+        "calibration": {
+          "ece_test": 0.035086,
+          "elo_test": [
+            {
+              "actual_rate": 0.2381,
+              "avg_prediction": 0.1671,
+              "bucket": "0.1-0.2",
+              "n": 21
+            },
+            {
+              "actual_rate": 0.2286,
+              "avg_prediction": 0.2578,
+              "bucket": "0.2-0.3",
+              "n": 70
+            },
+            {
+              "actual_rate": 0.3905,
+              "avg_prediction": 0.3551,
+              "bucket": "0.3-0.4",
+              "n": 105
+            },
+            {
+              "actual_rate": 0.4432,
+              "avg_prediction": 0.4487,
+              "bucket": "0.4-0.5",
+              "n": 176
+            },
+            {
+              "actual_rate": 0.5357,
+              "avg_prediction": 0.5511,
+              "bucket": "0.5-0.6",
+              "n": 168
+            },
+            {
+              "actual_rate": 0.6615,
+              "avg_prediction": 0.6468,
+              "bucket": "0.6-0.7",
+              "n": 130
+            },
+            {
+              "actual_rate": 0.8365,
+              "avg_prediction": 0.7478,
+              "bucket": "0.7-0.8",
+              "n": 104
+            },
+            {
+              "actual_rate": 0.8667,
+              "avg_prediction": 0.8302,
+              "bucket": "0.8-0.9",
+              "n": 30
+            },
+            {
+              "actual_rate": 1.0,
+              "avg_prediction": 0.9187,
+              "bucket": "0.9-1.0",
+              "n": 1
+            }
+          ],
+          "logistic_test": [
+            {
+              "actual_rate": 0.0667,
+              "avg_prediction": 0.0566,
+              "bucket": "0.0-0.1",
+              "n": 30
+            },
+            {
+              "actual_rate": 0.2154,
+              "avg_prediction": 0.1553,
+              "bucket": "0.1-0.2",
+              "n": 65
+            },
+            {
+              "actual_rate": 0.2949,
+              "avg_prediction": 0.2519,
+              "bucket": "0.2-0.3",
+              "n": 78
+            },
+            {
+              "actual_rate": 0.4352,
+              "avg_prediction": 0.3533,
+              "bucket": "0.3-0.4",
+              "n": 108
+            },
+            {
+              "actual_rate": 0.4717,
+              "avg_prediction": 0.4526,
+              "bucket": "0.4-0.5",
+              "n": 106
+            },
+            {
+              "actual_rate": 0.5619,
+              "avg_prediction": 0.5542,
+              "bucket": "0.5-0.6",
+              "n": 105
+            },
+            {
+              "actual_rate": 0.5977,
+              "avg_prediction": 0.6494,
+              "bucket": "0.6-0.7",
+              "n": 87
+            },
+            {
+              "actual_rate": 0.7619,
+              "avg_prediction": 0.7519,
+              "bucket": "0.7-0.8",
+              "n": 105
+            },
+            {
+              "actual_rate": 0.8171,
+              "avg_prediction": 0.8504,
+              "bucket": "0.8-0.9",
+              "n": 82
+            },
+            {
+              "actual_rate": 0.9231,
+              "avg_prediction": 0.9416,
+              "bucket": "0.9-1.0",
+              "n": 39
+            }
+          ],
+          "logistic_validation": [
+            {
+              "actual_rate": 0.0625,
+              "avg_prediction": 0.0688,
+              "bucket": "0.0-0.1",
+              "n": 16
+            },
+            {
+              "actual_rate": 0.2586,
+              "avg_prediction": 0.156,
+              "bucket": "0.1-0.2",
+              "n": 58
+            },
+            {
+              "actual_rate": 0.2,
+              "avg_prediction": 0.2474,
+              "bucket": "0.2-0.3",
+              "n": 90
+            },
+            {
+              "actual_rate": 0.3361,
+              "avg_prediction": 0.3525,
+              "bucket": "0.3-0.4",
+              "n": 119
+            },
+            {
+              "actual_rate": 0.4667,
+              "avg_prediction": 0.454,
+              "bucket": "0.4-0.5",
+              "n": 120
+            },
+            {
+              "actual_rate": 0.5,
+              "avg_prediction": 0.5528,
+              "bucket": "0.5-0.6",
+              "n": 106
+            },
+            {
+              "actual_rate": 0.6633,
+              "avg_prediction": 0.6496,
+              "bucket": "0.6-0.7",
+              "n": 98
+            },
+            {
+              "actual_rate": 0.78,
+              "avg_prediction": 0.7434,
+              "bucket": "0.7-0.8",
+              "n": 100
+            },
+            {
+              "actual_rate": 0.8442,
+              "avg_prediction": 0.8456,
+              "bucket": "0.8-0.9",
+              "n": 77
+            },
+            {
+              "actual_rate": 0.9,
+              "avg_prediction": 0.9224,
+              "bucket": "0.9-1.0",
+              "n": 20
+            }
+          ]
+        },
+        "calibrator": {
+          "a": 1.138713,
+          "b": 0.086964
+        },
+        "coefficients": [
+          {
+            "feature": "experience_diff",
+            "train_mean": 0.00894,
+            "train_std": 0.17818,
+            "weight": 0.64683
+          },
+          {
+            "feature": "elo_diff",
+            "train_mean": 0.0103,
+            "train_std": 0.26532,
+            "weight": 0.42726
+          },
+          {
+            "feature": "avg_runs_for_diff",
+            "train_mean": 0.006,
+            "train_std": 0.41317,
+            "weight": 0.21842
+          },
+          {
+            "feature": "avg_runs_against_diff",
+            "train_mean": -0.00556,
+            "train_std": 0.39734,
+            "weight": -0.11312
+          },
+          {
+            "feature": "venue_experience_diff",
+            "train_mean": 0.03401,
+            "train_std": 0.30189,
+            "weight": 0.09358
+          },
+          {
+            "feature": "avg_wickets_taken_diff",
+            "train_mean": -0.00165,
+            "train_std": 0.30477,
+            "weight": 0.06703
+          },
+          {
+            "feature": "world_cup_match",
+            "train_mean": 0.34923,
+            "train_std": 0.47673,
+            "weight": 0.04875
+          },
+          {
+            "feature": "intercept",
+            "weight": -0.03743
+          },
+          {
+            "feature": "rest_days_diff",
+            "train_mean": -0.00751,
+            "train_std": 0.76286,
+            "weight": -0.03473
+          },
+          {
+            "feature": "toss_team_a",
+            "train_mean": -0.05381,
+            "train_std": 0.99855,
+            "weight": 0.02193
+          },
+          {
+            "feature": "toss_bat_team_a",
+            "train_mean": 0.70591,
+            "train_std": 0.7083,
+            "weight": 0.00389
+          },
+          {
+            "feature": "female_match",
+            "train_mean": 0.35402,
+            "train_std": 0.47822,
+            "weight": 0.00289
+          },
+          {
+            "feature": "win_rate_diff",
+            "train_mean": 0.00083,
+            "train_std": 0.22783,
+            "weight": -0.00028
+          }
+        ],
+        "config": {
+          "epochs": 2500,
+          "l2": 0.015,
+          "learning_rate": 0.055,
+          "train_fraction": 0.7,
+          "validation_fraction": 0.15
+        },
+        "elo_comparison": {
+          "recent_365": {
+            "accuracy": 0.6509598603839442,
+            "brier": 0.21407553019869136,
+            "log_loss": 0.6171369381235153,
+            "n_matches": 1146
+          },
+          "test": {
+            "accuracy": 0.6484472049689441,
+            "brier": 0.2156483302151552,
+            "log_loss": 0.6205335172273679,
+            "n_matches": 805
+          },
+          "train": {
+            "accuracy": 0.6156100159829515,
+            "brier": 0.2265179416450186,
+            "log_loss": 0.6434540792094853,
+            "n_matches": 3754
+          },
+          "validation": {
+            "accuracy": 0.6691542288557214,
+            "brier": 0.21307346385136802,
+            "log_loss": 0.6159184452946544,
+            "n_matches": 804
+          }
+        },
+        "feature_names": [
+          "elo_diff",
+          "experience_diff",
+          "win_rate_diff",
+          "avg_runs_for_diff",
+          "avg_runs_against_diff",
+          "avg_wickets_taken_diff",
+          "venue_experience_diff",
+          "rest_days_diff",
+          "female_match",
+          "world_cup_match",
+          "toss_team_a",
+          "toss_bat_team_a"
+        ],
+        "model_name": "t20_logistic_posttoss_calibrated_v1",
+        "n_matches": 5363,
+        "splits": {
+          "recent_365": {
+            "accuracy": 0.6858638743455497,
+            "brier": 0.2011297455740355,
+            "log_loss": 0.5868432597921005,
+            "n_matches": 1146
+          },
+          "test": {
+            "accuracy": 0.6770186335403726,
+            "brier": 0.2033100479775547,
+            "log_loss": 0.5902919378727426,
+            "n_matches": 805
+          },
+          "train": {
+            "accuracy": 0.6795418220564731,
+            "brier": 0.20285789022206496,
+            "log_loss": 0.5901656318206406,
+            "n_matches": 3754
+          },
+          "validation": {
+            "accuracy": 0.6865671641791045,
+            "brier": 0.19950685737027757,
+            "log_loss": 0.5838744074808296,
+            "n_matches": 804
+          }
+        },
+        "timing": "post_toss"
+      },
+      "pretoss_logistic": {
+        "calibrated": true,
+        "calibration": {
+          "ece_test": 0.040675,
+          "elo_test": [
+            {
+              "actual_rate": 0.2381,
+              "avg_prediction": 0.1671,
+              "bucket": "0.1-0.2",
+              "n": 21
+            },
+            {
+              "actual_rate": 0.2286,
+              "avg_prediction": 0.2578,
+              "bucket": "0.2-0.3",
+              "n": 70
+            },
+            {
+              "actual_rate": 0.3905,
+              "avg_prediction": 0.3551,
+              "bucket": "0.3-0.4",
+              "n": 105
+            },
+            {
+              "actual_rate": 0.4432,
+              "avg_prediction": 0.4487,
+              "bucket": "0.4-0.5",
+              "n": 176
+            },
+            {
+              "actual_rate": 0.5357,
+              "avg_prediction": 0.5511,
+              "bucket": "0.5-0.6",
+              "n": 168
+            },
+            {
+              "actual_rate": 0.6615,
+              "avg_prediction": 0.6468,
+              "bucket": "0.6-0.7",
+              "n": 130
+            },
+            {
+              "actual_rate": 0.8365,
+              "avg_prediction": 0.7478,
+              "bucket": "0.7-0.8",
+              "n": 104
+            },
+            {
+              "actual_rate": 0.8667,
+              "avg_prediction": 0.8302,
+              "bucket": "0.8-0.9",
+              "n": 30
+            },
+            {
+              "actual_rate": 1.0,
+              "avg_prediction": 0.9187,
+              "bucket": "0.9-1.0",
+              "n": 1
+            }
+          ],
+          "logistic_test": [
+            {
+              "actual_rate": 0.0667,
+              "avg_prediction": 0.0567,
+              "bucket": "0.0-0.1",
+              "n": 30
+            },
+            {
+              "actual_rate": 0.2,
+              "avg_prediction": 0.1557,
+              "bucket": "0.1-0.2",
+              "n": 65
+            },
+            {
+              "actual_rate": 0.3117,
+              "avg_prediction": 0.2521,
+              "bucket": "0.2-0.3",
+              "n": 77
+            },
+            {
+              "actual_rate": 0.4444,
+              "avg_prediction": 0.3525,
+              "bucket": "0.3-0.4",
+              "n": 108
+            },
+            {
+              "actual_rate": 0.4455,
+              "avg_prediction": 0.4493,
+              "bucket": "0.4-0.5",
+              "n": 101
+            },
+            {
+              "actual_rate": 0.5804,
+              "avg_prediction": 0.5515,
+              "bucket": "0.5-0.6",
+              "n": 112
+            },
+            {
+              "actual_rate": 0.5765,
+              "avg_prediction": 0.6495,
+              "bucket": "0.6-0.7",
+              "n": 85
+            },
+            {
+              "actual_rate": 0.7664,
+              "avg_prediction": 0.7509,
+              "bucket": "0.7-0.8",
+              "n": 107
+            },
+            {
+              "actual_rate": 0.8171,
+              "avg_prediction": 0.8507,
+              "bucket": "0.8-0.9",
+              "n": 82
+            },
+            {
+              "actual_rate": 0.9211,
+              "avg_prediction": 0.9426,
+              "bucket": "0.9-1.0",
+              "n": 38
+            }
+          ],
+          "logistic_validation": [
+            {
+              "actual_rate": 0.0625,
+              "avg_prediction": 0.069,
+              "bucket": "0.0-0.1",
+              "n": 16
+            },
+            {
+              "actual_rate": 0.25,
+              "avg_prediction": 0.1566,
+              "bucket": "0.1-0.2",
+              "n": 60
+            },
+            {
+              "actual_rate": 0.2273,
+              "avg_prediction": 0.2489,
+              "bucket": "0.2-0.3",
+              "n": 88
+            },
+            {
+              "actual_rate": 0.3103,
+              "avg_prediction": 0.3521,
+              "bucket": "0.3-0.4",
+              "n": 116
+            },
+            {
+              "actual_rate": 0.4628,
+              "avg_prediction": 0.4521,
+              "bucket": "0.4-0.5",
+              "n": 121
+            },
+            {
+              "actual_rate": 0.5049,
+              "avg_prediction": 0.5493,
+              "bucket": "0.5-0.6",
+              "n": 103
+            },
+            {
+              "actual_rate": 0.6667,
+              "avg_prediction": 0.648,
+              "bucket": "0.6-0.7",
+              "n": 105
+            },
+            {
+              "actual_rate": 0.7778,
+              "avg_prediction": 0.7446,
+              "bucket": "0.7-0.8",
+              "n": 99
+            },
+            {
+              "actual_rate": 0.8462,
+              "avg_prediction": 0.8472,
+              "bucket": "0.8-0.9",
+              "n": 78
+            },
+            {
+              "actual_rate": 0.8889,
+              "avg_prediction": 0.9246,
+              "bucket": "0.9-1.0",
+              "n": 18
+            }
+          ]
+        },
+        "calibrator": {
+          "a": 1.138118,
+          "b": 0.088932
+        },
+        "coefficients": [
+          {
+            "feature": "experience_diff",
+            "train_mean": 0.00894,
+            "train_std": 0.17818,
+            "weight": 0.64706
+          },
+          {
+            "feature": "elo_diff",
+            "train_mean": 0.0103,
+            "train_std": 0.26532,
+            "weight": 0.42661
+          },
+          {
+            "feature": "avg_runs_for_diff",
+            "train_mean": 0.006,
+            "train_std": 0.41317,
+            "weight": 0.21934
+          },
+          {
+            "feature": "avg_runs_against_diff",
+            "train_mean": -0.00556,
+            "train_std": 0.39734,
+            "weight": -0.1133
+          },
+          {
+            "feature": "venue_experience_diff",
+            "train_mean": 0.03401,
+            "train_std": 0.30189,
+            "weight": 0.09323
+          },
+          {
+            "feature": "avg_wickets_taken_diff",
+            "train_mean": -0.00165,
+            "train_std": 0.30477,
+            "weight": 0.06698
+          },
+          {
+            "feature": "world_cup_match",
+            "train_mean": 0.34923,
+            "train_std": 0.47673,
+            "weight": 0.04874
+          },
+          {
+            "feature": "intercept",
+            "weight": -0.03768
+          },
+          {
+            "feature": "rest_days_diff",
+            "train_mean": -0.00751,
+            "train_std": 0.76286,
+            "weight": -0.03393
+          },
+          {
+            "feature": "female_match",
+            "train_mean": 0.35402,
+            "train_std": 0.47822,
+            "weight": 0.00351
+          },
+          {
+            "feature": "win_rate_diff",
+            "train_mean": 0.00083,
+            "train_std": 0.22783,
+            "weight": -0.00049
+          }
+        ],
+        "config": {
+          "epochs": 2500,
+          "l2": 0.015,
+          "learning_rate": 0.055,
+          "train_fraction": 0.7,
+          "validation_fraction": 0.15
+        },
+        "elo_comparison": {
+          "recent_365": {
+            "accuracy": 0.6509598603839442,
+            "brier": 0.21407553019869136,
+            "log_loss": 0.6171369381235153,
+            "n_matches": 1146
+          },
+          "test": {
+            "accuracy": 0.6484472049689441,
+            "brier": 0.2156483302151552,
+            "log_loss": 0.6205335172273679,
+            "n_matches": 805
+          },
+          "train": {
+            "accuracy": 0.6156100159829515,
+            "brier": 0.2265179416450186,
+            "log_loss": 0.6434540792094853,
+            "n_matches": 3754
+          },
+          "validation": {
+            "accuracy": 0.6691542288557214,
+            "brier": 0.21307346385136802,
+            "log_loss": 0.6159184452946544,
+            "n_matches": 804
+          }
+        },
+        "feature_names": [
+          "elo_diff",
+          "experience_diff",
+          "win_rate_diff",
+          "avg_runs_for_diff",
+          "avg_runs_against_diff",
+          "avg_wickets_taken_diff",
+          "venue_experience_diff",
+          "rest_days_diff",
+          "female_match",
+          "world_cup_match"
+        ],
+        "model_name": "t20_logistic_pretoss_calibrated_v1",
+        "n_matches": 5363,
+        "splits": {
+          "recent_365": {
+            "accuracy": 0.6884816753926701,
+            "brier": 0.20122615620029113,
+            "log_loss": 0.5870925824144769,
+            "n_matches": 1146
+          },
+          "test": {
+            "accuracy": 0.6795031055900621,
+            "brier": 0.20324308239079397,
+            "log_loss": 0.590121424029446,
+            "n_matches": 805
+          },
+          "train": {
+            "accuracy": 0.6790090570058605,
+            "brier": 0.20291107115200296,
+            "log_loss": 0.5902534171940029,
+            "n_matches": 3754
+          },
+          "validation": {
+            "accuracy": 0.6890547263681592,
+            "brier": 0.19951123145163824,
+            "log_loss": 0.5840313859076881,
+            "n_matches": 804
+          }
+        },
+        "timing": "pre_toss"
+      },
+      "promotion": {
+        "active_model": "t20_logistic_pretoss_calibrated_v1",
+        "candidate_model": "t20_logistic_pretoss_calibrated_v1",
+        "candidate_test_brier": 0.20324308239079397,
+        "incumbent_model": null,
+        "incumbent_test_brier": null,
+        "promoted": true
+      }
+    }
+  },
+  "active_model": {
+    "active": 1,
+    "calibrated": 1,
+    "feature_names_json": "[\"elo_diff\", \"experience_diff\", \"win_rate_diff\", \"avg_runs_for_diff\", \"avg_runs_against_diff\", \"avg_wickets_taken_diff\", \"venue_experience_diff\", \"rest_days_diff\", \"female_match\", \"world_cup_match\"]",
+    "generated_at": "2026-07-15T11:05:27+00:00",
+    "metrics_json": "{\"calibrated\": true, \"calibration\": {\"ece_test\": 0.040675, \"elo_test\": [{\"actual_rate\": 0.2381, \"avg_prediction\": 0.1671, \"bucket\": \"0.1-0.2\", \"n\": 21}, {\"actual_rate\": 0.2286, \"avg_prediction\": 0.2578, \"bucket\": \"0.2-0.3\", \"n\": 70}, {\"actual_rate\": 0.3905, \"avg_prediction\": 0.3551, \"bucket\": \"0.3-0.4\", \"n\": 105}, {\"actual_rate\": 0.4432, \"avg_prediction\": 0.4487, \"bucket\": \"0.4-0.5\", \"n\": 176}, {\"actual_rate\": 0.5357, \"avg_prediction\": 0.5511, \"bucket\": \"0.5-0.6\", \"n\": 168}, {\"actual_rate\": 0.6615, \"avg_prediction\": 0.6468, \"bucket\": \"0.6-0.7\", \"n\": 130}, {\"actual_rate\": 0.8365, \"avg_prediction\": 0.7478, \"bucket\": \"0.7-0.8\", \"n\": 104}, {\"actual_rate\": 0.8667, \"avg_prediction\": 0.8302, \"bucket\": \"0.8-0.9\", \"n\": 30}, {\"actual_rate\": 1.0, \"avg_prediction\": 0.9187, \"bucket\": \"0.9-1.0\", \"n\": 1}], \"logistic_test\": [{\"actual_rate\": 0.0667, \"avg_prediction\": 0.0567, \"bucket\": \"0.0-0.1\", \"n\": 30}, {\"actual_rate\": 0.2, \"avg_prediction\": 0.1557, \"bucket\": \"0.1-0.2\", \"n\": 65}, {\"actual_rate\": 0.3117, \"avg_prediction\": 0.2521, \"bucket\": \"0.2-0.3\", \"n\": 77}, {\"actual_rate\": 0.4444, \"avg_prediction\": 0.3525, \"bucket\": \"0.3-0.4\", \"n\": 108}, {\"actual_rate\": 0.4455, \"avg_prediction\": 0.4493, \"bucket\": \"0.4-0.5\", \"n\": 101}, {\"actual_rate\": 0.5804, \"avg_prediction\": 0.5515, \"bucket\": \"0.5-0.6\", \"n\": 112}, {\"actual_rate\": 0.5765, \"avg_prediction\": 0.6495, \"bucket\": \"0.6-0.7\", \"n\": 85}, {\"actual_rate\": 0.7664, \"avg_prediction\": 0.7509, \"bucket\": \"0.7-0.8\", \"n\": 107}, {\"actual_rate\": 0.8171, \"avg_prediction\": 0.8507, \"bucket\": \"0.8-0.9\", \"n\": 82}, {\"actual_rate\": 0.9211, \"avg_prediction\": 0.9426, \"bucket\": \"0.9-1.0\", \"n\": 38}], \"logistic_validation\": [{\"actual_rate\": 0.0625, \"avg_prediction\": 0.069, \"bucket\": \"0.0-0.1\", \"n\": 16}, {\"actual_rate\": 0.25, \"avg_prediction\": 0.1566, \"bucket\": \"0.1-0.2\", \"n\": 60}, {\"actual_rate\": 0.2273, \"avg_prediction\": 0.2489, \"bucket\": \"0.2-0.3\", \"n\": 88}, {\"actual_rate\": 0.3103, \"avg_prediction\": 0.3521, \"bucket\": \"0.3-0.4\", \"n\": 116}, {\"actual_rate\": 0.4628, \"avg_prediction\": 0.4521, \"bucket\": \"0.4-0.5\", \"n\": 121}, {\"actual_rate\": 0.5049, \"avg_prediction\": 0.5493, \"bucket\": \"0.5-0.6\", \"n\": 103}, {\"actual_rate\": 0.6667, \"avg_prediction\": 0.648, \"bucket\": \"0.6-0.7\", \"n\": 105}, {\"actual_rate\": 0.7778, \"avg_prediction\": 0.7446, \"bucket\": \"0.7-0.8\", \"n\": 99}, {\"actual_rate\": 0.8462, \"avg_prediction\": 0.8472, \"bucket\": \"0.8-0.9\", \"n\": 78}, {\"actual_rate\": 0.8889, \"avg_prediction\": 0.9246, \"bucket\": \"0.9-1.0\", \"n\": 18}]}, \"calibrator\": {\"a\": 1.138118, \"b\": 0.088932}, \"coefficients\": [{\"feature\": \"experience_diff\", \"train_mean\": 0.00894, \"train_std\": 0.17818, \"weight\": 0.64706}, {\"feature\": \"elo_diff\", \"train_mean\": 0.0103, \"train_std\": 0.26532, \"weight\": 0.42661}, {\"feature\": \"avg_runs_for_diff\", \"train_mean\": 0.006, \"train_std\": 0.41317, \"weight\": 0.21934}, {\"feature\": \"avg_runs_against_diff\", \"train_mean\": -0.00556, \"train_std\": 0.39734, \"weight\": -0.1133}, {\"feature\": \"venue_experience_diff\", \"train_mean\": 0.03401, \"train_std\": 0.30189, \"weight\": 0.09323}, {\"feature\": \"avg_wickets_taken_diff\", \"train_mean\": -0.00165, \"train_std\": 0.30477, \"weight\": 0.06698}, {\"feature\": \"world_cup_match\", \"train_mean\": 0.34923, \"train_std\": 0.47673, \"weight\": 0.04874}, {\"feature\": \"intercept\", \"weight\": -0.03768}, {\"feature\": \"rest_days_diff\", \"train_mean\": -0.00751, \"train_std\": 0.76286, \"weight\": -0.03393}, {\"feature\": \"female_match\", \"train_mean\": 0.35402, \"train_std\": 0.47822, \"weight\": 0.00351}, {\"feature\": \"win_rate_diff\", \"train_mean\": 0.00083, \"train_std\": 0.22783, \"weight\": -0.00049}], \"config\": {\"epochs\": 2500, \"l2\": 0.015, \"learning_rate\": 0.055, \"train_fraction\": 0.7, \"validation_fraction\": 0.15}, \"elo_comparison\": {\"recent_365\": {\"accuracy\": 0.6509598603839442, \"brier\": 0.21407553019869136, \"log_loss\": 0.6171369381235153, \"n_matches\": 1146}, \"test\": {\"accuracy\": 0.6484472049689441, \"brier\": 0.2156483302151552, \"log_loss\": 0.6205335172273679, \"n_matches\": 805}, \"train\": {\"accuracy\": 0.6156100159829515, \"brier\": 0.2265179416450186, \"log_loss\": 0.6434540792094853, \"n_matches\": 3754}, \"validation\": {\"accuracy\": 0.6691542288557214, \"brier\": 0.21307346385136802, \"log_loss\": 0.6159184452946544, \"n_matches\": 804}}, \"feature_names\": [\"elo_diff\", \"experience_diff\", \"win_rate_diff\", \"avg_runs_for_diff\", \"avg_runs_against_diff\", \"avg_wickets_taken_diff\", \"venue_experience_diff\", \"rest_days_diff\", \"female_match\", \"world_cup_match\"], \"model_name\": \"t20_logistic_pretoss_calibrated_v1\", \"n_matches\": 5363, \"splits\": {\"recent_365\": {\"accuracy\": 0.6884816753926701, \"brier\": 0.20122615620029113, \"log_loss\": 0.5870925824144769, \"n_matches\": 1146}, \"test\": {\"accuracy\": 0.6795031055900621, \"brier\": 0.20324308239079397, \"log_loss\": 0.590121424029446, \"n_matches\": 805}, \"train\": {\"accuracy\": 0.6790090570058605, \"brier\": 0.20291107115200296, \"log_loss\": 0.5902534171940029, \"n_matches\": 3754}, \"validation\": {\"accuracy\": 0.6890547263681592, \"brier\": 0.19951123145163824, \"log_loss\": 0.5840313859076881, \"n_matches\": 804}}, \"timing\": \"pre_toss\"}",
+    "model_family": "logistic_regression",
+    "model_name": "t20_logistic_pretoss_calibrated_v1",
+    "notes": "No active model yet; promoting t20_logistic_pretoss_calibrated_v1 (test_brier=0.2032).",
+    "status": "active",
+    "timing": "pre_toss"
+  },
+  "counts": {
+    "backtest_runs": 1,
+    "cricsheet_matches": 5524,
+    "market_baselines": 78,
+    "market_odds_snapshots": 2615,
+    "model_predictions": 16089,
+    "model_registry": 3,
+    "model_runs": 4,
+    "paper_bets": 2,
+    "team_elo_history": 5363
+  },
+  "generated_at": "2026-07-15T11:05:40+00:00",
+  "latest_backtest": {
+    "avg_clv": null,
+    "bets": 0,
+    "by_closing_line_result": [],
+    "by_competition": [],
+    "by_confidence_bucket": [],
+    "by_edge_bucket": [],
+    "by_market": [],
+    "by_source": [],
+    "config": {
+      "min_edge": 0.03,
+      "split": "test",
+      "stake": 10.0
+    },
+    "generated_at": "2026-07-15T11:05:40+00:00",
+    "max_drawdown": 0.0,
+    "model_name": "t20_logistic_pretoss_calibrated_v1",
+    "n_candidates": 0,
+    "notes": [
+      "Uses only model_predictions joined to historical market_baselines for candidate selection.",
+      "A candidate is eligible only when the market baseline timestamp is on or before the simulated match date.",
+      "CLV uses the latest stored market baseline for the same match/market/selection as an evaluation-only closing proxy.",
+      "Synthetic market-implied baselines and app fixture odds are excluded from strategy candidate selection.",
+      "This is paper research only; no real-money execution is represented."
+    ],
+    "pnl": 0,
+    "positive_clv_rate": null,
+    "recent_bets": [],
+    "roi": 0.0,
+    "sample_warning": "No historical candidates with timestamp-valid real market baselines.",
+    "staked": 0.0,
+    "win_rate": 0.0,
+    "wins": 0,
+    "yield": 0.0
+  },
+  "model_comparison": [
+    {
+      "active": 1,
+      "calibrated": true,
+      "ece_test": 0.040675,
+      "model_name": "t20_logistic_pretoss_calibrated_v1",
+      "recent_365_brier": 0.20122615620029113,
+      "test_accuracy": 0.6795031055900621,
+      "test_brier": 0.20324308239079397,
+      "test_log_loss": 0.590121424029446,
+      "timing": "pre_toss"
+    },
+    {
+      "active": 0,
+      "calibrated": true,
+      "ece_test": 0.035086,
+      "model_name": "t20_logistic_posttoss_calibrated_v1",
+      "recent_365_brier": 0.2011297455740355,
+      "test_accuracy": 0.6770186335403726,
+      "test_brier": 0.2033100479775547,
+      "test_log_loss": 0.5902919378727426,
+      "timing": "post_toss"
+    },
+    {
+      "active": 0,
+      "calibrated": true,
+      "ece_test": 0.054455,
+      "model_name": "t20_gradient_boosting_posttoss_calibrated_v1",
+      "recent_365_brier": 0.20437189510558282,
+      "test_accuracy": 0.6745341614906832,
+      "test_brier": 0.20541932179346908,
+      "test_log_loss": 0.5955388039951721,
+      "timing": "post_toss"
+    }
+  ],
+  "model_runs": [
+    {
+      "accuracy": 0.674534,
+      "brier": 0.205419,
+      "generated_at": "2026-07-15T11:05:39+00:00",
+      "id": 4,
+      "log_loss": 0.595539,
+      "model_name": "t20_gradient_boosting_posttoss_calibrated_v1",
+      "n_matches": 5363,
+      "payload_json": "{\"calibrated\": true, \"calibration\": {\"ece_test\": 0.054455, \"gradient_boosting_test\": [{\"actual_rate\": 0.0649, \"avg_prediction\": 0.1625, \"bucket\": \"0.1-0.2\", \"n\": 77}, {\"actual_rate\": 0.3684, \"avg_prediction\": 0.2524, \"bucket\": \"0.2-0.3\", \"n\": 95}, {\"actual_rate\": 0.4252, \"avg_prediction\": 0.349, \"bucket\": \"0.3-0.4\", \"n\": 127}, {\"actual_rate\": 0.4884, \"avg_prediction\": 0.4498, \"bucket\": \"0.4-0.5\", \"n\": 86}, {\"actual_rate\": 0.5275, \"avg_prediction\": 0.5523, \"bucket\": \"0.5-0.6\", \"n\": 91}, {\"actual_rate\": 0.6484, \"avg_prediction\": 0.6499, \"bucket\": \"0.6-0.7\", \"n\": 91}, {\"actual_rate\": 0.709, \"avg_prediction\": 0.7447, \"bucket\": \"0.7-0.8\", \"n\": 134}, {\"actual_rate\": 0.8846, \"avg_prediction\": 0.8354, \"bucket\": \"0.8-0.9\", \"n\": 104}]}, \"calibrator\": {\"a\": 1.594165, \"b\": 0.039685}, \"config\": {\"estimators\": 140, \"learning_rate\": 0.09, \"threshold_count\": 16, \"train_fraction\": 0.7, \"validation_fraction\": 0.15}, \"feature_names\": [\"elo_diff\", \"experience_diff\", \"win_rate_diff\", \"avg_runs_for_diff\", \"avg_runs_against_diff\", \"avg_wickets_taken_diff\", \"venue_experience_diff\", \"rest_days_diff\", \"female_match\", \"world_cup_match\", \"toss_team_a\", \"toss_bat_team_a\"], \"model_name\": \"t20_gradient_boosting_posttoss_calibrated_v1\", \"n_matches\": 5363, \"splits\": {\"recent_365\": {\"accuracy\": 0.6815008726003491, \"brier\": 0.20437189510558282, \"log_loss\": 0.5939720568489777, \"n_matches\": 1146}, \"test\": {\"accuracy\": 0.6745341614906832, \"brier\": 0.20541932179346908, \"log_loss\": 0.5955388039951721, \"n_matches\": 805}, \"train\": {\"accuracy\": 0.6779435269046351, \"brier\": 0.20474713004700013, \"log_loss\": 0.5953885417974865, \"n_matches\": 3754}, \"validation\": {\"accuracy\": 0.6753731343283582, \"brier\": 0.2028029336383701, \"log_loss\": 0.5901405350943638, \"n_matches\": 804}}, \"stump_count\": 140, \"timing\": \"post_toss\", \"top_stump_features\": [{\"count\": 77, \"feature\": \"experience_diff\"}, {\"count\": 41, \"feature\": \"elo_diff\"}, {\"count\": 21, \"feature\": \"avg_runs_for_diff\"}, {\"count\": 1, \"feature\": \"win_rate_diff\"}]}"
+    },
+    {
+      "accuracy": 0.677019,
+      "brier": 0.20331,
+      "generated_at": "2026-07-15T11:05:31+00:00",
+      "id": 3,
+      "log_loss": 0.590292,
+      "model_name": "t20_logistic_posttoss_calibrated_v1",
+      "n_matches": 5363,
+      "payload_json": "{\"calibrated\": true, \"calibration\": {\"ece_test\": 0.035086, \"elo_test\": [{\"actual_rate\": 0.2381, \"avg_prediction\": 0.1671, \"bucket\": \"0.1-0.2\", \"n\": 21}, {\"actual_rate\": 0.2286, \"avg_prediction\": 0.2578, \"bucket\": \"0.2-0.3\", \"n\": 70}, {\"actual_rate\": 0.3905, \"avg_prediction\": 0.3551, \"bucket\": \"0.3-0.4\", \"n\": 105}, {\"actual_rate\": 0.4432, \"avg_prediction\": 0.4487, \"bucket\": \"0.4-0.5\", \"n\": 176}, {\"actual_rate\": 0.5357, \"avg_prediction\": 0.5511, \"bucket\": \"0.5-0.6\", \"n\": 168}, {\"actual_rate\": 0.6615, \"avg_prediction\": 0.6468, \"bucket\": \"0.6-0.7\", \"n\": 130}, {\"actual_rate\": 0.8365, \"avg_prediction\": 0.7478, \"bucket\": \"0.7-0.8\", \"n\": 104}, {\"actual_rate\": 0.8667, \"avg_prediction\": 0.8302, \"bucket\": \"0.8-0.9\", \"n\": 30}, {\"actual_rate\": 1.0, \"avg_prediction\": 0.9187, \"bucket\": \"0.9-1.0\", \"n\": 1}], \"logistic_test\": [{\"actual_rate\": 0.0667, \"avg_prediction\": 0.0566, \"bucket\": \"0.0-0.1\", \"n\": 30}, {\"actual_rate\": 0.2154, \"avg_prediction\": 0.1553, \"bucket\": \"0.1-0.2\", \"n\": 65}, {\"actual_rate\": 0.2949, \"avg_prediction\": 0.2519, \"bucket\": \"0.2-0.3\", \"n\": 78}, {\"actual_rate\": 0.4352, \"avg_prediction\": 0.3533, \"bucket\": \"0.3-0.4\", \"n\": 108}, {\"actual_rate\": 0.4717, \"avg_prediction\": 0.4526, \"bucket\": \"0.4-0.5\", \"n\": 106}, {\"actual_rate\": 0.5619, \"avg_prediction\": 0.5542, \"bucket\": \"0.5-0.6\", \"n\": 105}, {\"actual_rate\": 0.5977, \"avg_prediction\": 0.6494, \"bucket\": \"0.6-0.7\", \"n\": 87}, {\"actual_rate\": 0.7619, \"avg_prediction\": 0.7519, \"bucket\": \"0.7-0.8\", \"n\": 105}, {\"actual_rate\": 0.8171, \"avg_prediction\": 0.8504, \"bucket\": \"0.8-0.9\", \"n\": 82}, {\"actual_rate\": 0.9231, \"avg_prediction\": 0.9416, \"bucket\": \"0.9-1.0\", \"n\": 39}], \"logistic_validation\": [{\"actual_rate\": 0.0625, \"avg_prediction\": 0.0688, \"bucket\": \"0.0-0.1\", \"n\": 16}, {\"actual_rate\": 0.2586, \"avg_prediction\": 0.156, \"bucket\": \"0.1-0.2\", \"n\": 58}, {\"actual_rate\": 0.2, \"avg_prediction\": 0.2474, \"bucket\": \"0.2-0.3\", \"n\": 90}, {\"actual_rate\": 0.3361, \"avg_prediction\": 0.3525, \"bucket\": \"0.3-0.4\", \"n\": 119}, {\"actual_rate\": 0.4667, \"avg_prediction\": 0.454, \"bucket\": \"0.4-0.5\", \"n\": 120}, {\"actual_rate\": 0.5, \"avg_prediction\": 0.5528, \"bucket\": \"0.5-0.6\", \"n\": 106}, {\"actual_rate\": 0.6633, \"avg_prediction\": 0.6496, \"bucket\": \"0.6-0.7\", \"n\": 98}, {\"actual_rate\": 0.78, \"avg_prediction\": 0.7434, \"bucket\": \"0.7-0.8\", \"n\": 100}, {\"actual_rate\": 0.8442, \"avg_prediction\": 0.8456, \"bucket\": \"0.8-0.9\", \"n\": 77}, {\"actual_rate\": 0.9, \"avg_prediction\": 0.9224, \"bucket\": \"0.9-1.0\", \"n\": 20}]}, \"calibrator\": {\"a\": 1.138713, \"b\": 0.086964}, \"coefficients\": [{\"feature\": \"experience_diff\", \"train_mean\": 0.00894, \"train_std\": 0.17818, \"weight\": 0.64683}, {\"feature\": \"elo_diff\", \"train_mean\": 0.0103, \"train_std\": 0.26532, \"weight\": 0.42726}, {\"feature\": \"avg_runs_for_diff\", \"train_mean\": 0.006, \"train_std\": 0.41317, \"weight\": 0.21842}, {\"feature\": \"avg_runs_against_diff\", \"train_mean\": -0.00556, \"train_std\": 0.39734, \"weight\": -0.11312}, {\"feature\": \"venue_experience_diff\", \"train_mean\": 0.03401, \"train_std\": 0.30189, \"weight\": 0.09358}, {\"feature\": \"avg_wickets_taken_diff\", \"train_mean\": -0.00165, \"train_std\": 0.30477, \"weight\": 0.06703}, {\"feature\": \"world_cup_match\", \"train_mean\": 0.34923, \"train_std\": 0.47673, \"weight\": 0.04875}, {\"feature\": \"intercept\", \"weight\": -0.03743}, {\"feature\": \"rest_days_diff\", \"train_mean\": -0.00751, \"train_std\": 0.76286, \"weight\": -0.03473}, {\"feature\": \"toss_team_a\", \"train_mean\": -0.05381, \"train_std\": 0.99855, \"weight\": 0.02193}, {\"feature\": \"toss_bat_team_a\", \"train_mean\": 0.70591, \"train_std\": 0.7083, \"weight\": 0.00389}, {\"feature\": \"female_match\", \"train_mean\": 0.35402, \"train_std\": 0.47822, \"weight\": 0.00289}, {\"feature\": \"win_rate_diff\", \"train_mean\": 0.00083, \"train_std\": 0.22783, \"weight\": -0.00028}], \"config\": {\"epochs\": 2500, \"l2\": 0.015, \"learning_rate\": 0.055, \"train_fraction\": 0.7, \"validation_fraction\": 0.15}, \"elo_comparison\": {\"recent_365\": {\"accuracy\": 0.6509598603839442, \"brier\": 0.21407553019869136, \"log_loss\": 0.6171369381235153, \"n_matches\": 1146}, \"test\": {\"accuracy\": 0.6484472049689441, \"brier\": 0.2156483302151552, \"log_loss\": 0.6205335172273679, \"n_matches\": 805}, \"train\": {\"accuracy\": 0.6156100159829515, \"brier\": 0.2265179416450186, \"log_loss\": 0.6434540792094853, \"n_matches\": 3754}, \"validation\": {\"accuracy\": 0.6691542288557214, \"brier\": 0.21307346385136802, \"log_loss\": 0.6159184452946544, \"n_matches\": 804}}, \"feature_names\": [\"elo_diff\", \"experience_diff\", \"win_rate_diff\", \"avg_runs_for_diff\", \"avg_runs_against_diff\", \"avg_wickets_taken_diff\", \"venue_experience_diff\", \"rest_days_diff\", \"female_match\", \"world_cup_match\", \"toss_team_a\", \"toss_bat_team_a\"], \"model_name\": \"t20_logistic_posttoss_calibrated_v1\", \"n_matches\": 5363, \"splits\": {\"recent_365\": {\"accuracy\": 0.6858638743455497, \"brier\": 0.2011297455740355, \"log_loss\": 0.5868432597921005, \"n_matches\": 1146}, \"test\": {\"accuracy\": 0.6770186335403726, \"brier\": 0.2033100479775547, \"log_loss\": 0.5902919378727426, \"n_matches\": 805}, \"train\": {\"accuracy\": 0.6795418220564731, \"brier\": 0.20285789022206496, \"log_loss\": 0.5901656318206406, \"n_matches\": 3754}, \"validation\": {\"accuracy\": 0.6865671641791045, \"brier\": 0.19950685737027757, \"log_loss\": 0.5838744074808296, \"n_matches\": 804}}, \"timing\": \"post_toss\"}"
+    },
+    {
+      "accuracy": 0.679503,
+      "brier": 0.203243,
+      "generated_at": "2026-07-15T11:05:27+00:00",
+      "id": 2,
+      "log_loss": 0.590121,
+      "model_name": "t20_logistic_pretoss_calibrated_v1",
+      "n_matches": 5363,
+      "payload_json": "{\"calibrated\": true, \"calibration\": {\"ece_test\": 0.040675, \"elo_test\": [{\"actual_rate\": 0.2381, \"avg_prediction\": 0.1671, \"bucket\": \"0.1-0.2\", \"n\": 21}, {\"actual_rate\": 0.2286, \"avg_prediction\": 0.2578, \"bucket\": \"0.2-0.3\", \"n\": 70}, {\"actual_rate\": 0.3905, \"avg_prediction\": 0.3551, \"bucket\": \"0.3-0.4\", \"n\": 105}, {\"actual_rate\": 0.4432, \"avg_prediction\": 0.4487, \"bucket\": \"0.4-0.5\", \"n\": 176}, {\"actual_rate\": 0.5357, \"avg_prediction\": 0.5511, \"bucket\": \"0.5-0.6\", \"n\": 168}, {\"actual_rate\": 0.6615, \"avg_prediction\": 0.6468, \"bucket\": \"0.6-0.7\", \"n\": 130}, {\"actual_rate\": 0.8365, \"avg_prediction\": 0.7478, \"bucket\": \"0.7-0.8\", \"n\": 104}, {\"actual_rate\": 0.8667, \"avg_prediction\": 0.8302, \"bucket\": \"0.8-0.9\", \"n\": 30}, {\"actual_rate\": 1.0, \"avg_prediction\": 0.9187, \"bucket\": \"0.9-1.0\", \"n\": 1}], \"logistic_test\": [{\"actual_rate\": 0.0667, \"avg_prediction\": 0.0567, \"bucket\": \"0.0-0.1\", \"n\": 30}, {\"actual_rate\": 0.2, \"avg_prediction\": 0.1557, \"bucket\": \"0.1-0.2\", \"n\": 65}, {\"actual_rate\": 0.3117, \"avg_prediction\": 0.2521, \"bucket\": \"0.2-0.3\", \"n\": 77}, {\"actual_rate\": 0.4444, \"avg_prediction\": 0.3525, \"bucket\": \"0.3-0.4\", \"n\": 108}, {\"actual_rate\": 0.4455, \"avg_prediction\": 0.4493, \"bucket\": \"0.4-0.5\", \"n\": 101}, {\"actual_rate\": 0.5804, \"avg_prediction\": 0.5515, \"bucket\": \"0.5-0.6\", \"n\": 112}, {\"actual_rate\": 0.5765, \"avg_prediction\": 0.6495, \"bucket\": \"0.6-0.7\", \"n\": 85}, {\"actual_rate\": 0.7664, \"avg_prediction\": 0.7509, \"bucket\": \"0.7-0.8\", \"n\": 107}, {\"actual_rate\": 0.8171, \"avg_prediction\": 0.8507, \"bucket\": \"0.8-0.9\", \"n\": 82}, {\"actual_rate\": 0.9211, \"avg_prediction\": 0.9426, \"bucket\": \"0.9-1.0\", \"n\": 38}], \"logistic_validation\": [{\"actual_rate\": 0.0625, \"avg_prediction\": 0.069, \"bucket\": \"0.0-0.1\", \"n\": 16}, {\"actual_rate\": 0.25, \"avg_prediction\": 0.1566, \"bucket\": \"0.1-0.2\", \"n\": 60}, {\"actual_rate\": 0.2273, \"avg_prediction\": 0.2489, \"bucket\": \"0.2-0.3\", \"n\": 88}, {\"actual_rate\": 0.3103, \"avg_prediction\": 0.3521, \"bucket\": \"0.3-0.4\", \"n\": 116}, {\"actual_rate\": 0.4628, \"avg_prediction\": 0.4521, \"bucket\": \"0.4-0.5\", \"n\": 121}, {\"actual_rate\": 0.5049, \"avg_prediction\": 0.5493, \"bucket\": \"0.5-0.6\", \"n\": 103}, {\"actual_rate\": 0.6667, \"avg_prediction\": 0.648, \"bucket\": \"0.6-0.7\", \"n\": 105}, {\"actual_rate\": 0.7778, \"avg_prediction\": 0.7446, \"bucket\": \"0.7-0.8\", \"n\": 99}, {\"actual_rate\": 0.8462, \"avg_prediction\": 0.8472, \"bucket\": \"0.8-0.9\", \"n\": 78}, {\"actual_rate\": 0.8889, \"avg_prediction\": 0.9246, \"bucket\": \"0.9-1.0\", \"n\": 18}]}, \"calibrator\": {\"a\": 1.138118, \"b\": 0.088932}, \"coefficients\": [{\"feature\": \"experience_diff\", \"train_mean\": 0.00894, \"train_std\": 0.17818, \"weight\": 0.64706}, {\"feature\": \"elo_diff\", \"train_mean\": 0.0103, \"train_std\": 0.26532, \"weight\": 0.42661}, {\"feature\": \"avg_runs_for_diff\", \"train_mean\": 0.006, \"train_std\": 0.41317, \"weight\": 0.21934}, {\"feature\": \"avg_runs_against_diff\", \"train_mean\": -0.00556, \"train_std\": 0.39734, \"weight\": -0.1133}, {\"feature\": \"venue_experience_diff\", \"train_mean\": 0.03401, \"train_std\": 0.30189, \"weight\": 0.09323}, {\"feature\": \"avg_wickets_taken_diff\", \"train_mean\": -0.00165, \"train_std\": 0.30477, \"weight\": 0.06698}, {\"feature\": \"world_cup_match\", \"train_mean\": 0.34923, \"train_std\": 0.47673, \"weight\": 0.04874}, {\"feature\": \"intercept\", \"weight\": -0.03768}, {\"feature\": \"rest_days_diff\", \"train_mean\": -0.00751, \"train_std\": 0.76286, \"weight\": -0.03393}, {\"feature\": \"female_match\", \"train_mean\": 0.35402, \"train_std\": 0.47822, \"weight\": 0.00351}, {\"feature\": \"win_rate_diff\", \"train_mean\": 0.00083, \"train_std\": 0.22783, \"weight\": -0.00049}], \"config\": {\"epochs\": 2500, \"l2\": 0.015, \"learning_rate\": 0.055, \"train_fraction\": 0.7, \"validation_fraction\": 0.15}, \"elo_comparison\": {\"recent_365\": {\"accuracy\": 0.6509598603839442, \"brier\": 0.21407553019869136, \"log_loss\": 0.6171369381235153, \"n_matches\": 1146}, \"test\": {\"accuracy\": 0.6484472049689441, \"brier\": 0.2156483302151552, \"log_loss\": 0.6205335172273679, \"n_matches\": 805}, \"train\": {\"accuracy\": 0.6156100159829515, \"brier\": 0.2265179416450186, \"log_loss\": 0.6434540792094853, \"n_matches\": 3754}, \"validation\": {\"accuracy\": 0.6691542288557214, \"brier\": 0.21307346385136802, \"log_loss\": 0.6159184452946544, \"n_matches\": 804}}, \"feature_names\": [\"elo_diff\", \"experience_diff\", \"win_rate_diff\", \"avg_runs_for_diff\", \"avg_runs_against_diff\", \"avg_wickets_taken_diff\", \"venue_experience_diff\", \"rest_days_diff\", \"female_match\", \"world_cup_match\"], \"model_name\": \"t20_logistic_pretoss_calibrated_v1\", \"n_matches\": 5363, \"splits\": {\"recent_365\": {\"accuracy\": 0.6884816753926701, \"brier\": 0.20122615620029113, \"log_loss\": 0.5870925824144769, \"n_matches\": 1146}, \"test\": {\"accuracy\": 0.6795031055900621, \"brier\": 0.20324308239079397, \"log_loss\": 0.590121424029446, \"n_matches\": 805}, \"train\": {\"accuracy\": 0.6790090570058605, \"brier\": 0.20291107115200296, \"log_loss\": 0.5902534171940029, \"n_matches\": 3754}, \"validation\": {\"accuracy\": 0.6890547263681592, \"brier\": 0.19951123145163824, \"log_loss\": 0.5840313859076881, \"n_matches\": 804}}, \"timing\": \"pre_toss\"}"
+    },
+    {
+      "accuracy": 0.628566,
+      "brier": 0.222871,
+      "generated_at": "2026-07-15T11:05:14+00:00",
+      "id": 1,
+      "log_loss": 0.635886,
+      "model_name": "t20_team_elo_v1",
+      "n_matches": 5363,
+      "payload_json": "{\"accuracy\": 0.628566101062838, \"brier\": 0.22287084382176148, \"config\": {\"home_advantage\": 18.0, \"k_factor\": 24.0, \"min_matches_for_eval\": 50, \"start_rating\": 1500.0}, \"log_loss\": 0.6358856270445854, \"model_name\": \"t20_team_elo_v1\", \"n_matches\": 5363, \"recent_180\": {\"accuracy\": 0.6410684474123539, \"brier\": 0.21897791652754595, \"log_loss\": 0.6283900066777963, \"n_matches\": 599}, \"recent_365\": {\"accuracy\": 0.6509598603839442, \"brier\": 0.21407557940663177, \"log_loss\": 0.61713707504363, \"n_matches\": 1146}, \"teams\": 109, \"top_ratings\": [{\"rating\": 1922.8, \"team\": \"England\"}, {\"rating\": 1919.3, \"team\": \"Australia\"}, {\"rating\": 1835.3, \"team\": \"India\"}, {\"rating\": 1819.3, \"team\": \"South Africa\"}, {\"rating\": 1749.9, \"team\": \"New Zealand\"}, {\"rating\": 1721.9, \"team\": \"Ireland\"}, {\"rating\": 1707.9, \"team\": \"Pakistan\"}, {\"rating\": 1702.9, \"team\": \"United Arab Emirates\"}, {\"rating\": 1694.7, \"team\": \"Sri Lanka\"}, {\"rating\": 1683.4, \"team\": \"West Indies\"}, {\"rating\": 1682.5, \"team\": \"Uganda\"}, {\"rating\": 1666.9, \"team\": \"Spain\"}]}"
+    }
+  ],
+  "readiness": {
+    "items": [
+      {
+        "detail": "The app exposes only a paper broker and has no live-money execution path.",
+        "key": "real_money_disabled",
+        "label": "Real-money connector disabled",
+        "status": "pass"
+      },
+      {
+        "detail": "Paper account exists and bankroll/exposure can be audited.",
+        "key": "paper_broker",
+        "label": "Paper broker state",
+        "status": "pass"
+      },
+      {
+        "detail": "ODDS_API_KEY is loaded from environment/.env; the key itself is never displayed.",
+        "key": "bet365_configured",
+        "label": "Bet365 odds feed configured",
+        "status": "pass"
+      },
+      {
+        "detail": "At least one Bet365 market snapshot has been stored.",
+        "key": "real_odds_captured",
+        "label": "Real bookmaker odds captured",
+        "status": "pass"
+      },
+      {
+        "detail": "Risk decisions explicitly block missing or stale Bet365 odds.",
+        "key": "fresh_odds_gate",
+        "label": "Fresh-odds betting gate",
+        "status": "watch"
+      },
+      {
+        "detail": "Cricsheet matches and chronological Elo rows must exist before supervised evaluation can be reproduced.",
+        "key": "model_training_data",
+        "label": "Model training data",
+        "status": "pass"
+      },
+      {
+        "detail": "At least one model run should be stored with Brier score, log loss, accuracy, and payload metrics.",
+        "key": "model_runs",
+        "label": "Model evaluation runs",
+        "status": "pass"
+      },
+      {
+        "detail": "Historical predictions are needed for calibration review and strategy backtests.",
+        "key": "model_predictions",
+        "label": "Historical model predictions",
+        "status": "pass"
+      },
+      {
+        "detail": "One active model should be selected for paper execution.",
+        "key": "active_model",
+        "label": "Active model registry",
+        "status": "pass"
+      },
+      {
+        "detail": "Run the market data build/backtest after historical market odds exist.",
+        "key": "historical_backtesting",
+        "label": "Historical strategy backtesting",
+        "status": "gap"
+      },
+      {
+        "detail": "A research-grade read needs at least 30 bets from timestamp-valid real market baselines.",
+        "key": "backtest_sample_size",
+        "label": "Backtest sample size",
+        "status": "watch"
+      },
+      {
+        "detail": "Paper bet evaluations compare entry odds against the latest closing proxy.",
+        "key": "clv_tracking",
+        "label": "Paper CLV tracking",
+        "status": "pass"
+      },
+      {
+        "detail": "Pipeline decisions are persisted with reasons and payloads.",
+        "key": "decision_log",
+        "label": "Decision audit trail",
+        "status": "pass"
+      },
+      {
+        "detail": "Background scheduler ticks monitor/settle continuously and retrains on a schedule, without manual button presses.",
+        "key": "scheduler_heartbeat",
+        "label": "Background scheduler heartbeat",
+        "status": "pass"
+      },
+      {
+        "detail": "Pytest coverage exists for odds parsing, risk gates, workflows, server routes, and backtesting.",
+        "key": "tests",
+        "label": "Regression tests",
+        "status": "pass"
+      }
+    ],
+    "summary": {
+      "complete": 12,
+      "gaps": 1,
+      "generated_at": "2026-07-15T11:05:46+00:00",
+      "mode": "paper_only",
+      "total": 15,
+      "watch": 2
+    }
+  },
+  "warnings": []
+}
